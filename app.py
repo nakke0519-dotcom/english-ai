@@ -22,7 +22,6 @@ def get_default_bank():
     # 예시 지문 3개
     default_bank[1] = {
         "title": "지문 1: 일기 쓰기와 스트레스 관리",
-        "type": "기본 분석 (키워드/주제/흐름)",
         "q1": "1. 지문의 핵심 키워드",
         "q2": "2. 주제 한 문장 요약",
         "q3": "3. 글의 흐름 세 문장 요약",
@@ -33,7 +32,6 @@ def get_default_bank():
     }
     default_bank[2] = {
         "title": "지문 2: 수면과 기억력의 관계",
-        "type": "기본 분석 (키워드/주제/흐름)",
         "q1": "1. 지문의 핵심 키워드",
         "q2": "2. 주제 한 문장 요약",
         "q3": "3. 글의 흐름 세 문장 요약",
@@ -44,7 +42,6 @@ def get_default_bank():
     }
     default_bank[3] = {
         "title": "지문 3: 기술 발달과 환경 문제",
-        "type": "기본 분석 (키워드/주제/흐름)",
         "q1": "1. 지문의 핵심 키워드",
         "q2": "2. 주제 한 문장 요약",
         "q3": "3. 글의 흐름 세 문장 요약",
@@ -57,7 +54,6 @@ def get_default_bank():
     for i in range(4, 36):
         default_bank[i] = {
             "title": f"지문 {i}: (제목을 입력하세요)",
-            "type": "기본 분석 (키워드/주제/흐름)",
             "q1": "1. 지문의 핵심 키워드",
             "q2": "2. 주제 한 문장 요약",
             "q3": "3. 글의 흐름 세 문장 요약",
@@ -74,11 +70,8 @@ def load_problem_bank():
                 data = json.load(f)
                 parsed_data = {int(k): v for k, v in data.items()}
                 
-                # 구버전 데이터 호환 처리 (질문 항목이 없는 경우 채워넣기)
                 for i in range(1, 36):
                     if i in parsed_data:
-                        if "type" not in parsed_data[i]:
-                            parsed_data[i]["type"] = "기본 분석 (키워드/주제/흐름)"
                         if "q1" not in parsed_data[i]:
                             parsed_data[i]["q1"] = "1. 지문의 핵심 키워드"
                         if "q2" not in parsed_data[i]:
@@ -121,40 +114,20 @@ with st.sidebar:
     # 1. 제목 수정
     new_title = st.text_input("문제 이름 (드롭다운 표시명)", value=selected_problem.get("title", ""), key=f"title_input_{selected_id}")
     
-    # 2. 문제 유형 및 질문 설정
-    type_options = ["기본 분석 (키워드/주제/흐름)", "서술형 / 요약문 완성", "어휘 및 주요 문장 분석", "자유 질문 (직접 입력)"]
-    current_type = selected_problem.get("type", "기본 분석 (키워드/주제/흐름)")
-    type_index = type_options.index(current_type) if current_type in type_options else 3
-    
-    selected_type = st.selectbox("🎯 문제 유형 선택", type_options, index=type_index, key=f"type_select_{selected_id}")
-    
-    # 유형별 질문 자동 채우기 또는 자유 작성
-    if selected_type == "기본 분석 (키워드/주제/흐름)":
-        default_q1, default_q2, default_q3 = "1. 지문의 핵심 키워드", "2. 주제 한 문장 요약", "3. 글의 흐름 세 문장 요약"
-    elif selected_type == "서술형 / 요약문 완성":
-        default_q1, default_q2, default_q3 = "1. 핵심 세부사항 정리", "2. 지문 요약문 작성 (2~3문장)", "3. 글의 핵심 주제문"
-    elif selected_type == "어휘 및 주요 문장 분석":
-        default_q1, default_q2, default_q3 = "1. 핵심 어휘 및 의미 파악", "2. 가장 중요한 문장 해석", "3. 지문의 요지 요약"
-    else:  # 자유 질문
-        default_q1 = selected_problem.get("q1", "1. 질문 1")
-        default_q2 = selected_problem.get("q2", "2. 질문 2")
-        default_q3 = selected_problem.get("q3", "3. 질문 3")
-
     st.markdown("---")
     st.subheader("❓ 학생 질문 세부 설정")
-    q1_text = st.text_input("첫 번째 질문 발문", value=default_q1, key=f"q1_in_{selected_id}")
-    q2_text = st.text_input("두 번째 질문 발문", value=default_q2, key=f"q2_in_{selected_id}")
-    q3_text = st.text_input("세 번째 질문 발문", value=default_q3, key=f"q3_in_{selected_id}")
+    q1_text = st.text_input("첫 번째 질문 발문", value=selected_problem.get("q1", "1. 지문의 핵심 키워드"), key=f"q1_in_{selected_id}")
+    q2_text = st.text_input("두 번째 질문 발문", value=selected_problem.get("q2", "2. 주제 한 문장 요약"), key=f"q2_in_{selected_id}")
+    q3_text = st.text_input("세 번째 질문 발문", value=selected_problem.get("q3", "3. 글의 흐름 세 문장 요약"), key=f"q3_in_{selected_id}")
 
     st.markdown("---")
-    # 3. 지문 및 모범답안 수정
+    # 2. 지문 및 모범답안 수정
     new_passage = st.text_area("영어 지문", height=200, value=selected_problem.get("passage", ""), key=f"passage_input_{selected_id}")
     new_key_points = st.text_area("모범 답안 / 핵심 요소 및 채점 기준", height=150, value=selected_problem.get("key_points", ""), key=f"key_input_{selected_id}")
 
     # 저장 버튼
     if st.button("💾 변경사항 전체 저장", type="primary"):
         st.session_state["PROBLEM_BANK"][selected_id]["title"] = new_title
-        st.session_state["PROBLEM_BANK"][selected_id]["type"] = selected_type
         st.session_state["PROBLEM_BANK"][selected_id]["q1"] = q1_text
         st.session_state["PROBLEM_BANK"][selected_id]["q2"] = q2_text
         st.session_state["PROBLEM_BANK"][selected_id]["q3"] = q3_text
@@ -168,33 +141,31 @@ with st.sidebar:
 # --- 학생 입력 영역 ---
 st.markdown("---")
 st.subheader(f"📝 {selected_problem['title']}")
-st.caption(f"📌 **문제 유형**: {selected_problem.get('type', '기본 분석')}")
 st.info(selected_problem['passage'])
 
 col1, col2 = st.columns(2)
 with col1:
-    user_ans1 = st.text_input(selected_problem.get("q1", "1. 질문 1"), key=f"ans1_{selected_id}")
-    user_ans2 = st.text_input(selected_problem.get("q2", "2. 질문 2"), key=f"ans2_{selected_id}")
+    user_ans1 = st.text_input(selected_problem.get("q1", "1. 지문의 핵심 키워드"), key=f"ans1_{selected_id}")
+    user_ans2 = st.text_input(selected_problem.get("q2", "2. 주제 한 문장 요약"), key=f"ans2_{selected_id}")
 with col2:
-    user_ans3 = st.text_area(selected_problem.get("q3", "3. 질문 3"), height=100, key=f"ans3_{selected_id}")
+    user_ans3 = st.text_area(selected_problem.get("q3", "3. 글의 흐름 세 문장 요약"), height=100, key=f"ans3_{selected_id}")
 
 # --- AI 피드백 생성 ---
 if st.button("🚀 AI 피드백 받기", type="primary"):
     if not (user_ans1 and user_ans2 and user_ans3):
         st.warning("모든 질문에 답을 작성한 뒤 버튼을 눌러주세요!")
     else:
-        with st.spinner("AI 선생님이 답변을 분석 중입니다..."):
+        with st.spinner("AI 선생님이 수능 출제 매커니즘에 기반하여 분석 중입니다..."):
             prompt = f"""
-            당신은 친절하고 전문적인 고등학교 영어 교사입니다.
-            학생이 제출한 답안을 평가하고 구체적이고 따뜻한 피드백을 제공해주세요.
+            당신은 EBS '수능특강 Light 영어독해연습' 및 대학수학능력시험 영어영역에 매우 정통한 베테랑 고등학교 영어 교사입니다.
+            제시된 지문은 '수능특강 Light 영어독해연습' 수준의 구문이며, 문제 유형은 수능 및 모의고사 출제 유형에 해당합니다.
 
-            [문제 유형]
-            {selected_problem.get('type', '일반 분석')}
+            학생이 작성한 답안을 바탕으로 다음과 같은 기준에 맞추어 전문적이고 친절한 피드백을 제공해주세요.
 
             [영어 지문]
             {selected_problem['passage']}
 
-            [모범 답안 및 평가 기준]
+            [모범 답안 및 채점 기준]
             {selected_problem['key_points']}
 
             [학생이 작성한 질문 및 답안]
@@ -205,12 +176,17 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
             - 질문 3: {selected_problem.get('q3')}
               학생 답안: {user_ans3}
 
-            [피드백 작성 지침]
-            1. 첫 줄에는 반드시 "정답률: O%" 형태로 종합 점수를 적어주세요. (예: 75% 정답입니다.)
-            2. 학생이 적은 각 질문별 답안(1번, 2번, 3번)을 각각 나누어 세심하게 평가해 주세요.
-            3. 잘한 점(지문 이해도, 정확성 등)을 칭찬해주세요.
-            4. 부족하거나 보완해야 할 점(누락된 정보, 요구사항 준수 여부 등)을 따뜻하게 지적해 주세요.
-            5. 정답률을 높이기 위한 실질적인 한 줄 조언을 덧붙여주세요.
+            [피드백 작성 가이드라인]
+            1. **종합 정답률 평가**: 첫 줄에 반드시 "정답률: O%" 형태로 점수를 적어주세요.
+            2. **글의 핵심 주제 및 키워드 파악 평가**:
+               - 문제 유형과 관계없이 학생이 글의 핵심 주제와 키워드를 얼마나 정확하게 파악했는지 평가해주세요.
+            3. **수능/모의고사 접근 전략 제시**:
+               - 해당 지문과 수능 유형 문제를 풀기 위해 학생이 어떻게 접근해야 했는지, 글을 읽을 때 어떤 요소(접속사, 대조 구조, 핵심 소재 등)를 중점적으로 살펴야 하는지 전략적으로 설명해주세요.
+            4. **오답 요인 예측 및 분석 (오답이 있는 경우)**:
+               - 학생이 오답이나 아쉬운 답변을 냈다면, 왜 지문의 특정 부분에 낚이거나 헷갈렸을지(예: 일부 단어에만 얽매임, 부분적 해석 오류 등) 원인을 추측해 분석해 주세요.
+               - 왜 그것이 오답이며 정답 기준과 어떤 차이가 있는지 확실한 근거를 지문 기반으로 제시해 주세요.
+            5. **따뜻한 총평 및 실전 한 줄 조언**:
+               - 잘한 점을 격려하고 다음 실전 풀이 시 유용한 한 줄 팁을 남겨주세요.
             """
 
             try:
