@@ -2,20 +2,56 @@ import streamlit as st
 import google.generativeai as genai
 import json
 import os
+import requests
+import base64
 from datetime import datetime
 
 st.set_page_config(page_title="영어 지문 AI 피드백 Teacher", page_icon="📖", layout="wide")
 
-# --- API 키 확인 ---
+# --- API 키 및 Secrets 확인 ---
 api_key = st.secrets.get("GEMINI_API_KEY")
+github_token = st.secrets.get("GITHUB_TOKEN")
+github_repo = st.secrets.get("GITHUB_REPO")
+
 if not api_key:
-    st.error("Google Gemini API 키가 설정되지 않았습니다. 관리자 설정을 확인해주세요.")
+    st.error("Google Gemini API 키가 설정되지 않았습니다. Secrets 설정을 확인해주세요.")
     st.stop()
 
 genai.configure(api_key=api_key)
 
 DATA_FILE = "problem_bank.json"
 SUBMISSION_FILE = "submissions.json"
+
+# --- GitHub 자동 동기화 (Commit) 함수 ---
+def commit_file_to_github(filename, content_str, commit_message):
+    if not github_token or not github_repo:
+        return False
+    
+    url = f"https://api.github.com/repos/{github_repo}/contents/{filename}"
+    headers = {
+        "Authorization": f"token {github_token}",
+        "Accept": "application/vnd.github.v3+json"
+    }
+    
+    # 1. 기존 파일의 SHA 값 가져오기
+    sha = None
+    res = requests.get(url, headers=headers)
+    if res.status_code == 200:
+        sha = res.json().get("sha")
+        
+    # 2. 내용 Base64 인코딩
+    content_b64 = base64.b64encode(content_str.encode("utf-8")).decode("utf-8")
+    
+    # 3. GitHub API로 파일 업로드 (Commit)
+    payload = {
+        "message": commit_message,
+        "content": content_b64
+    }
+    if sha:
+        payload["sha"] = sha
+        
+    put_res = requests.put(url, headers=headers, json=payload)
+    return put_res.status_code in [200, 201]
 
 # --- 기본 문제 데이터 생성 ---
 def get_default_bank():
@@ -83,8 +119,11 @@ def load_problem_bank():
     return get_default_bank()
 
 def save_problem_bank(data):
+    json_str = json.dumps(data, ensure_ascii=False, indent=2)
     with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+        f.write(json_str)
+    # GitHub 서버로 영구 동기화
+    commit_file_to_github(DATA_FILE, json_str, "Update problem bank data")
 
 # --- 학생 제출 데이터 불러오기/저장 ---
 def load_submissions():
@@ -99,8 +138,11 @@ def load_submissions():
 def save_submission(record):
     submissions = load_submissions()
     submissions.append(record)
+    json_str = json.dumps(submissions, ensure_ascii=False, indent=2)
     with open(SUBMISSION_FILE, "w", encoding="utf-8") as f:
-        json.dump(submissions, f, ensure_ascii=False, indent=2)
+        f.write(json_str)
+    # GitHub 서버로 영구 동기화
+    commit_file_to_github(SUBMISSION_FILE, json_str, f"Add student submission ({record['student']})")
 
 # 세션 데이터 초기화
 if "PROBLEM_BANK" not in st.session_state:
@@ -129,7 +171,7 @@ selected_problem = st.session_state["PROBLEM_BANK"][selected_id]
 # --- 교사 전용 수정 및 조회 사이드바 ---
 with st.sidebar:
     st.header(f"⚙️ [교사용] {selected_id}번 문제 수정")
-    st.caption("수정 후 아래 [💾 변경사항 전체 저장] 버튼을 누르면 모든 학생에게 반영됩니다.")
+    st.caption("수정 후 아래 [💾 변경사항 전체 저장] 버튼을 누르면 모든 학생에게 동기화 및 영구 저장됩니다.")
     
     new_title = st.text_input("문제 이름 (드롭다운 표시명)", value=selected_problem.get("title", ""), key=f"title_input_{selected_id}")
     
@@ -152,7 +194,7 @@ with st.sidebar:
         st.session_state["PROBLEM_BANK"][selected_id]["key_points"] = new_key_points
         
         save_problem_bank(st.session_state["PROBLEM_BANK"])
-        st.success("성공적으로 저장되었습니다!")
+        st.success("성공적으로 저장 및 GitHub 동기화되었습니다!")
         st.rerun()
 
     st.markdown("---")
@@ -162,7 +204,6 @@ with st.sidebar:
     if not submissions_data:
         st.info("아직 제출된 학생 답안이 없습니다.")
     else:
-        # 최근 제출순 정렬
         sorted_subs = sorted(submissions_data, key=lambda x: x.get("timestamp", ""), reverse=True)
         sub_labels = [f"{sub['student']} - {sub['problem_title']} ({sub['timestamp']})" for sub in sorted_subs]
         
@@ -241,7 +282,6 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
                 
                 feedback = response.text
                 
-                # 제출 내역 기록 저장
                 record = {
                     "student": student_name.strip(),
                     "problem_id": selected_id,
@@ -254,7 +294,7 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
                 }
                 save_submission(record)
 
-                st.success("피드백 작성이 완료되었습니다! (교사 제출 DB 기록 완료)")
+                st.success("피드백 작성이 완료되었습니다! (GitHub 동기화 완료)")
                 st.markdown("### 📊 AI 피드백 결과")
                 st.write(feedback)
             except Exception as e:
