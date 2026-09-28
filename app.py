@@ -63,7 +63,7 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
 
             try:
                 response = client.models.generate_content(
-                    model='gemini-2.5-flash',
+                    model='gemini-1.5-flash',
                     contents=prompt,
                 )
                 
