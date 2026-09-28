@@ -63,8 +63,8 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
             """
 
             try:
-                # 가장 보편적이고 호환성이 높은 모델 사용
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # 최신 안정화 모델 명칭 적용
+                model = genai.GenerativeModel('gemini-2.0-flash')
                 response = model.generate_content(prompt)
                 
                 feedback = response.text
