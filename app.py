@@ -2,6 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 import json
 import os
+from datetime import datetime
 
 st.set_page_config(page_title="영어 지문 AI 피드백 Teacher", page_icon="📖", layout="wide")
 
@@ -14,12 +15,11 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 DATA_FILE = "problem_bank.json"
+SUBMISSION_FILE = "submissions.json"
 
 # --- 기본 문제 데이터 생성 ---
 def get_default_bank():
     default_bank = {}
-    
-    # 예시 지문 3개
     default_bank[1] = {
         "title": "지문 1: 일기 쓰기와 스트레스 관리",
         "q1": "1. 지문의 핵심 키워드",
@@ -62,14 +62,13 @@ def get_default_bank():
         }
     return default_bank
 
-# --- 데이터 불러오기/저장 함수 ---
+# --- 문제 데이터 불러오기/저장 ---
 def load_problem_bank():
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 parsed_data = {int(k): v for k, v in data.items()}
-                
                 for i in range(1, 36):
                     if i in parsed_data:
                         if "q1" not in parsed_data[i]:
@@ -87,31 +86,51 @@ def save_problem_bank(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
+# --- 학생 제출 데이터 불러오기/저장 ---
+def load_submissions():
+    if os.path.exists(SUBMISSION_FILE):
+        try:
+            with open(SUBMISSION_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return []
+
+def save_submission(record):
+    submissions = load_submissions()
+    submissions.append(record)
+    with open(SUBMISSION_FILE, "w", encoding="utf-8") as f:
+        json.dump(submissions, f, ensure_ascii=False, indent=2)
+
 # 세션 데이터 초기화
 if "PROBLEM_BANK" not in st.session_state:
     st.session_state["PROBLEM_BANK"] = load_problem_bank()
 
 # --- 헤더 ---
 st.title("📖 영어 모의고사 독해 AI 피드백")
-st.write("원하는 문제를 선택하고 지문을 읽은 뒤 답변을 작성하세요.")
+st.write("학번과 이름을 입력하고 문제를 선택하여 답변을 작성하세요.")
 
-# --- 지문 선택 드롭다운 (1번 ~ 35번) ---
+# --- 학생 이름 입력 및 지문 선택 ---
+col_student, col_select = st.columns([1, 2])
+with col_student:
+    student_name = st.text_input("👤 학생 이름 (예: 10101 홍길동)", placeholder="학번과 이름을 입력하세요")
+
 options_map = {f"{st.session_state['PROBLEM_BANK'][i]['title']}": i for i in range(1, 36)}
 
-selected_option_label = st.selectbox(
-    "📌 풀고 싶은 문제를 선택하세요:",
-    list(options_map.keys())
-)
+with col_select:
+    selected_option_label = st.selectbox(
+        "📌 풀고 싶은 문제를 선택하세요:",
+        list(options_map.keys())
+    )
 
 selected_id = options_map[selected_option_label]
 selected_problem = st.session_state["PROBLEM_BANK"][selected_id]
 
-# --- 교사 전용 수정 사이드바 ---
+# --- 교사 전용 수정 및 조회 사이드바 ---
 with st.sidebar:
     st.header(f"⚙️ [교사용] {selected_id}번 문제 수정")
     st.caption("수정 후 아래 [💾 변경사항 전체 저장] 버튼을 누르면 모든 학생에게 반영됩니다.")
     
-    # 1. 제목 수정
     new_title = st.text_input("문제 이름 (드롭다운 표시명)", value=selected_problem.get("title", ""), key=f"title_input_{selected_id}")
     
     st.markdown("---")
@@ -121,11 +140,9 @@ with st.sidebar:
     q3_text = st.text_input("세 번째 질문 발문", value=selected_problem.get("q3", "3. 글의 흐름 세 문장 요약"), key=f"q3_in_{selected_id}")
 
     st.markdown("---")
-    # 2. 지문 및 모범답안 수정
-    new_passage = st.text_area("영어 지문", height=200, value=selected_problem.get("passage", ""), key=f"passage_input_{selected_id}")
-    new_key_points = st.text_area("모범 답안 / 핵심 요소 및 채점 기준", height=150, value=selected_problem.get("key_points", ""), key=f"key_input_{selected_id}")
+    new_passage = st.text_area("영어 지문", height=180, value=selected_problem.get("passage", ""), key=f"passage_input_{selected_id}")
+    new_key_points = st.text_area("모범 답안 / 핵심 요소 및 채점 기준", height=120, value=selected_problem.get("key_points", ""), key=f"key_input_{selected_id}")
 
-    # 저장 버튼
     if st.button("💾 변경사항 전체 저장", type="primary"):
         st.session_state["PROBLEM_BANK"][selected_id]["title"] = new_title
         st.session_state["PROBLEM_BANK"][selected_id]["q1"] = q1_text
@@ -135,8 +152,35 @@ with st.sidebar:
         st.session_state["PROBLEM_BANK"][selected_id]["key_points"] = new_key_points
         
         save_problem_bank(st.session_state["PROBLEM_BANK"])
-        st.success("성공적으로 저장되었습니다! 학생들의 화면에도 동기화됩니다.")
+        st.success("성공적으로 저장되었습니다!")
         st.rerun()
+
+    st.markdown("---")
+    st.header("📊 [교사용] 실시간 학생 답안 조회")
+    submissions_data = load_submissions()
+    
+    if not submissions_data:
+        st.info("아직 제출된 학생 답안이 없습니다.")
+    else:
+        # 최근 제출순 정렬
+        sorted_subs = sorted(submissions_data, key=lambda x: x.get("timestamp", ""), reverse=True)
+        sub_labels = [f"{sub['student']} - {sub['problem_title']} ({sub['timestamp']})" for sub in sorted_subs]
+        
+        selected_sub_label = st.selectbox("📋 제출 내역 선택", sub_labels)
+        selected_sub_idx = sub_labels.index(selected_sub_label)
+        sub_info = sorted_subs[selected_sub_idx]
+        
+        st.markdown(f"**👤 학생**: {sub_info['student']}")
+        st.markdown(f"**📖 지문**: {sub_info['problem_title']}")
+        st.markdown(f"**⏰ 제출 시간**: {sub_info['timestamp']}")
+        
+        with st.expander("📝 학생이 작성한 답안 보기", expanded=True):
+            st.write(f"**1. 키워드**: {sub_info['ans1']}")
+            st.write(f"**2. 주제 요약**: {sub_info['ans2']}")
+            st.write(f"**3. 흐름 요약**: {sub_info['ans3']}")
+            
+        with st.expander("🤖 전달된 AI 피드백 보기", expanded=False):
+            st.write(sub_info['feedback'])
 
 # --- 학생 입력 영역 ---
 st.markdown("---")
@@ -152,7 +196,9 @@ with col2:
 
 # --- AI 피드백 생성 ---
 if st.button("🚀 AI 피드백 받기", type="primary"):
-    if not (user_ans1 and user_ans2 and user_ans3):
+    if not student_name.strip():
+        st.warning("상단에 학생 이름(학번)을 꼭 입력해 주세요!")
+    elif not (user_ans1 and user_ans2 and user_ans3):
         st.warning("모든 질문에 답을 작성한 뒤 버튼을 눌러주세요!")
     else:
         with st.spinner("AI 선생님이 수능 출제 매커니즘에 기반하여 분석 중입니다..."):
@@ -194,7 +240,21 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
                 response = model.generate_content(prompt)
                 
                 feedback = response.text
-                st.success("피드백 작성이 완료되었습니다!")
+                
+                # 제출 내역 기록 저장
+                record = {
+                    "student": student_name.strip(),
+                    "problem_id": selected_id,
+                    "problem_title": selected_problem['title'],
+                    "ans1": user_ans1,
+                    "ans2": user_ans2,
+                    "ans3": user_ans3,
+                    "feedback": feedback,
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+                save_submission(record)
+
+                st.success("피드백 작성이 완료되었습니다! (교사 제출 DB 기록 완료)")
                 st.markdown("### 📊 AI 피드백 결과")
                 st.write(feedback)
             except Exception as e:
