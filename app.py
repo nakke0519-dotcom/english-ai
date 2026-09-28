@@ -1,5 +1,5 @@
 import streamlit as st
-import openai
+from google import genai
 
 st.set_page_config(page_title="영어 지문 AI 피드백 Teacher", page_icon="📖")
 
@@ -7,12 +7,12 @@ st.title("📖 영어 모의고사 독해 AI 피드백")
 st.write("지문을 읽고 질문에 답을 작성한 뒤 아래 **[AI 피드백 받기]** 버튼을 누르세요.")
 
 # --- API 키 확인 ---
-api_key = st.secrets.get("OPENAI_API_KEY")
+api_key = st.secrets.get("GEMINI_API_KEY")
 if not api_key:
-    st.error("OpenAI API 키가 설정되지 않았습니다. 관리자 설정을 확인해주세요.")
+    st.error("Google Gemini API 키가 설정되지 않았습니다. 관리자 설정을 확인해주세요.")
     st.stop()
 
-client = openai.OpenAI(api_key=api_key)
+client = genai.Client(api_key=api_key)
 
 # --- 교사 입력 영역 (지문 및 모범답안) ---
 with st.sidebar:
@@ -62,13 +62,12 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
             """
 
             try:
-                response = client.chat.completions.create(
-                    model="gpt-4o-mini",
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.7
+                response = client.models.generate_content(
+                    model='gemini-2.5-flash',
+                    contents=prompt,
                 )
                 
-                feedback = response.choices[0].message.content
+                feedback = response.text
                 st.success("피드백 작성이 완료되었습니다!")
                 st.markdown("### 📊 AI 피드백 결과")
                 st.write(feedback)
