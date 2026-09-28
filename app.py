@@ -64,10 +64,10 @@ st.info(passage)
 
 col1, col2 = st.columns(2)
 with col1:
-    user_keywords = st.text_input("1. 지문의 핵심 키워드 (2~3개)", key=f"kw_{selected_title}")
-    user_topic = st.text_input("2. 생각한 지문의 주제", key=f"tp_{selected_title}")
+    user_keywords = st.text_input("1. 지문의 핵심 키워드", key=f"kw_{selected_title}")
+    user_topic = st.text_input("2. 주제 한 문장 요약", key=f"tp_{selected_title}")
 with col2:
-    user_flow = st.text_area("3. 글의 전체적인 흐름 (서론-본론-결론 등)", height=100, key=f"fl_{selected_title}")
+    user_flow = st.text_area("3. 글의 흐름 세 문장 요약", height=100, key=f"fl_{selected_title}")
 
 # --- AI 피드백 생성 ---
 if st.button("🚀 AI 피드백 받기", type="primary"):
@@ -86,15 +86,16 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
             {key_points}
 
             [학생이 제출한 답안]
-            - 학생의 키워드: {user_keywords}
-            - 학생의 주제: {user_topic}
-            - 학생의 글 흐름 분석: {user_flow}
+            1. 핵심 키워드: {user_keywords}
+            2. 주제 한 문장 요약: {user_topic}
+            3. 글의 흐름 세 문장 요약: {user_flow}
 
             [피드백 작성 지침]
             1. 첫 줄에는 반드시 "정답률: O%" 형태로 종합 점수를 적어주세요. (예: 75% 정답입니다.)
-            2. 잘한 점(맞춘 키워드나 적절한 파악)을 칭찬해주세요.
-            3. 부족하거나 보완해야 할 점(누락된 맥락이나 아쉬운 표현)을 알려주세요.
-            4. 정답률을 올리기 위한 간단한 한 줄 조언을 덧붙여주세요.
+            2. 학생이 적은 1) 핵심 키워드, 2) 주제 한 문장 요약, 3) 글의 흐름 세 문장 요약을 각각 나누어 평가해 주세요.
+            3. 잘한 점(맞춘 키워드나 적절한 맥락 파악)을 칭찬해주세요.
+            4. 부족하거나 보완해야 할 점(누락된 정보, 3문장 요약 형식을 지켰는지 등)을 따뜻하게 지적해 주세요.
+            5. 정답률을 올리기 위한 간단한 한 줄 조언을 덧붙여주세요.
             """
 
             try:
