@@ -1,5 +1,5 @@
 import streamlit as st
-from google import genai
+import google.generativeai as genai
 
 st.set_page_config(page_title="영어 지문 AI 피드백 Teacher", page_icon="📖")
 
@@ -12,7 +12,8 @@ if not api_key:
     st.error("Google Gemini API 키가 설정되지 않았습니다. 관리자 설정을 확인해주세요.")
     st.stop()
 
-client = genai.Client(api_key=api_key)
+# Gemini API 설정
+genai.configure(api_key=api_key)
 
 # --- 교사 입력 영역 (지문 및 모범답안) ---
 with st.sidebar:
@@ -62,10 +63,9 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
             """
 
             try:
-                response = client.models.generate_content(
-                    model='gemini-1.5-flash',
-                    contents=prompt,
-                )
+                # 가장 보편적이고 호환성이 높은 모델 사용
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                response = model.generate_content(prompt)
                 
                 feedback = response.text
                 st.success("피드백 작성이 완료되었습니다!")
