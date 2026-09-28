@@ -63,8 +63,8 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
             """
 
             try:
-                # 최신 안정화 모델 명칭 적용
-                model = genai.GenerativeModel('gemini-2.0-flash')
+                # 구글 최신 권장 모델 명칭 적용
+                model = genai.GenerativeModel('gemini-3.8-flash')
                 response = model.generate_content(prompt)
                 
                 feedback = response.text
