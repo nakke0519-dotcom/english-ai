@@ -122,7 +122,6 @@ def save_problem_bank(data):
     json_str = json.dumps(data, ensure_ascii=False, indent=2)
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         f.write(json_str)
-    # GitHub 서버로 영구 동기화
     commit_file_to_github(DATA_FILE, json_str, "Update problem bank data")
 
 # --- 학생 제출 데이터 불러오기/저장 ---
@@ -141,7 +140,6 @@ def save_submission(record):
     json_str = json.dumps(submissions, ensure_ascii=False, indent=2)
     with open(SUBMISSION_FILE, "w", encoding="utf-8") as f:
         f.write(json_str)
-    # GitHub 서버로 영구 동기화
     commit_file_to_github(SUBMISSION_FILE, json_str, f"Add student submission ({record['student']})")
 
 # 세션 데이터 초기화
@@ -277,8 +275,9 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
             """
 
             try:
-                model = genai.GenerativeModel('gemini-3.1-flash-lite')
-                response_step2 = model.generate_content(prompt_step2)
+                # 구글 Gemini 공식 경량/고속 모델 적용
+                model = genai.GenerativeModel('gemini-1.5-flash')
+                response = model.generate_content(prompt)
                 
                 feedback = response.text
                 
