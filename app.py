@@ -276,7 +276,7 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
 
             try:
                 # 구글 Gemini 공식 경량/고속 모델 적용
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                model = genai.GenerativeModel('gemini-3.1-flash-lite')
                 response = model.generate_content(prompt)
                 
                 feedback = response.text
