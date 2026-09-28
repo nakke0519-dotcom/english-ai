@@ -277,8 +277,8 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
             """
 
             try:
-                model = genai.GenerativeModel('gemini-3.8-flash')
-                response = model.generate_content(prompt)
+                model = genai.GenerativeModel('gemini-3.1-flash-lite')
+                response_step2 = model.generate_content(prompt_step2)
                 
                 feedback = response.text
                 
