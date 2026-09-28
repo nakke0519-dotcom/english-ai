@@ -20,8 +20,16 @@ if "PROBLEM_BANK" not in st.session_state:
     
     # 예시 지문 3개 세팅
     st.session_state["PROBLEM_BANK"][1] = {
-        "title": "지문 1: 일기 쓰기와 스트레스 관리",
-        "passage": """Research shows that people who keep a journal regularly tend to manage stress better than those who do not. Writing down thoughts and feelings helps process complex emotions and reduces psychological burden. Furthermore, it offers an opportunity to reflect on daily activities and improve decision-making skills.""",
+        "title": "8강 1번 (50P)",
+        "passage": """Triangle enthusiast Pythagoras thought a lot about music. He studied the lyre, a stringed instrument
+that was kind of a handheld harp, and developed the mathematics around ① how tone changes with
+string length. Strike a lyre string and you contribute energy to it, making the string vibrate at a
+particular frequency that’s a function of its length; your ears experience ② that vibrating energy
+as a specific tone, like B-flat. Pythagoras believed that everything in the natural world ③ was
+similarly ruled by math. When he looked up at the night sky, he didn’t just see stars and planets —
+he saw an elegant equation at work. He believed that each planet emitted a different sound as it
+rotated and revolved, like the strings of a lyre, each ④ contributes a unique celestial tone to a
+beautiful cosmic symphony. This concept became ⑤ known as “the music of the spheres.”""",
         "key_points": """- 키워드: Journaling, Stress management, Reflect
 - 주제: 일기 쓰기가 스트레스 해소 및 감정 정리에 미치는 긍정적 영향
 - 흐름: 연구 결과 소개 -> 일기 쓰기의 감정적 이점 -> 반성 및 의사결정 능력 향상으로 연결"""
