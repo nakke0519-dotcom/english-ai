@@ -97,10 +97,26 @@ def save_submission(record):
     with open(SUBMISSION_FILE, "w", encoding="utf-8") as f:
         f.write(json_str)
 
-# 세션 데이터 초기화 (앱 실행 동안 메모리 유지)
+# 세션 데이터 초기화
 if "PROBLEM_BANK" not in st.session_state:
     st.session_state["PROBLEM_BANK"] = load_problem_bank()
 
+# --- 교사 전용 수정 및 AI 온/오프 제어 사이드바 ---
+with st.sidebar:
+    st.header("🔒 [교사용] 시스템 제어")
+    
+    # AI 피드백 ON/OFF 토글 스위치 (기본값: OFF)
+    ai_enabled = st.toggle("🟢 AI 피드백 기능 활성화 (수업 중)", value=False)
+    
+    if ai_enabled:
+        st.success("STATUS: AI 피드백이 [활성화] 상태입니다.")
+    else:
+        st.info("STATUS: AI 피드백이 [비활성화] 상태입니다. (토큰 절약 중)")
+        
+    st.markdown("---")
+
+    selected_id_temp = 1  # 임시 지정
+    
 # --- 헤더 ---
 st.title("📖 ENGLISH READING AI ASSISTANT")
 st.write("학번과 이름을 입력하고 문제를 선택하여 답변을 작성하세요.")
@@ -121,9 +137,9 @@ with col_select:
 selected_id = options_map[selected_option_label]
 selected_problem = st.session_state["PROBLEM_BANK"][selected_id]
 
-# --- 교사 전용 수정 및 조회 사이드바 ---
+# --- 교사 문제 수정 영역 (사이드바 상세) ---
 with st.sidebar:
-    st.header(f"⚙️ [교사용] {selected_id}번 문제 수정")
+    st.header(f"⚙️ {selected_id}번 문제 수정")
     st.caption("수정 후 아래 [💾 변경사항 저장] 버튼을 누르면 설정이 즉시 반영됩니다.")
     
     new_title = st.text_input("문제 이름 (드롭다운 표시명)", value=selected_problem.get("title", ""), key=f"title_input_{selected_id}")
@@ -146,15 +162,13 @@ with st.sidebar:
         st.session_state["PROBLEM_BANK"][selected_id]["passage"] = new_passage
         st.session_state["PROBLEM_BANK"][selected_id]["key_points"] = new_key_points
         
-        # 파일 및 세션에 저장
         save_problem_bank(st.session_state["PROBLEM_BANK"])
         st.success("수정 사항이 저장되었습니다!")
         st.rerun()
 
     st.markdown("---")
-    st.header("📊 [교사용] 학생 답안 백업 / 데이터 관리")
+    st.header("📊 데이터 백업")
     
-    # 수정된 백업 파일 다운로드 기능
     bank_json = json.dumps(st.session_state["PROBLEM_BANK"], ensure_ascii=False, indent=2)
     st.download_button(
         label="📥 문제 데이터 백업 파일 다운로드",
@@ -164,7 +178,7 @@ with st.sidebar:
     )
 
     st.markdown("---")
-    st.header("📊 [교사용] 실시간 학생 답안 조회")
+    st.header("📊 실시간 학생 답안 조회")
     submissions_data = load_submissions()
     
     if not submissions_data:
@@ -203,12 +217,15 @@ with col2:
 
 # --- AI 피드백 생성 ---
 if st.button("🚀 AI 피드백 받기", type="primary"):
-    if not student_name.strip():
+    # 1. AI 기능 ON/OFF 체크 (OFF일 때 API 호출 차단)
+    if not ai_enabled:
+        st.error("🛑 현재는 AI 피드백 사용 시간이 아닙니다.")
+    elif not student_name.strip():
         st.warning("상단에 학생 이름(학번)을 꼭 입력해 주세요!")
     elif not (user_ans1 and user_ans2 and user_ans3):
         st.warning("모든 질문에 답을 작성한 뒤 버튼을 눌러주세요!")
     else:
-        with st.spinner("AI 어시스턴트가 수능 출제 매커니즘에 기반하여 분석 중입니다..."):
+        with st.spinner("AI 선생님이 수능 출제 매커니즘에 기반하여 분석 중입니다..."):
             prompt = f"""
             당신은 EBS '수능특강 Light 영어독해연습' 및 대학수학능력시험 영어영역에 매우 정통한 베테랑 고등학교 영어 교사입니다.
             제시된 지문은 '수능특강 Light 영어독해연습' 수준의 구문이며, 문제 유형은 수능 및 모의고사 출제 유형에 해당합니다.
