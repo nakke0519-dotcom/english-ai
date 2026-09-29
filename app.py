@@ -8,7 +8,7 @@ st.set_page_config(page_title="ENGLISH READING AI ASSISTANT", page_icon="📖", 
 
 # --- API 키 및 비밀번호 확인 ---
 api_key = st.secrets.get("GEMINI_API_KEY")
-teacher_password = st.secrets.get("TEACHER_PASSWORD", "1234")  # 비밀번호 미설정 시 기본 1234
+teacher_password = st.secrets.get("TEACHER_PASSWORD", "rnswltk1!")  # 비밀번호 미설정 시 기본 1234
 
 if not api_key:
     st.error("Google Gemini API 키가 설정되지 않았습니다. Streamlit Secrets 설정을 확인해주세요.")
