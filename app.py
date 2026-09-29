@@ -6,7 +6,7 @@ import requests
 import base64
 from datetime import datetime
 
-st.set_page_config(page_title="영어 지문 AI 피드백 Teacher", page_icon="📖", layout="wide")
+st.set_page_config(page_title="ENGLISH READING AI ASSISTANT", page_icon="📖", layout="wide")
 
 # --- API 키 및 Secrets 확인 ---
 api_key = st.secrets.get("GEMINI_API_KEY")
