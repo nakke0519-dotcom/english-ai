@@ -2,56 +2,21 @@ import streamlit as st
 import google.generativeai as genai
 import json
 import os
-import requests
-import base64
 from datetime import datetime
 
 st.set_page_config(page_title="ENGLISH READING AI ASSISTANT", page_icon="📖", layout="wide")
 
-# --- API 키 및 Secrets 확인 ---
+# --- API 키 확인 ---
 api_key = st.secrets.get("GEMINI_API_KEY")
-github_token = st.secrets.get("GITHUB_TOKEN")
-github_repo = st.secrets.get("GITHUB_REPO")
 
 if not api_key:
-    st.error("Google Gemini API 키가 설정되지 않았습니다. Secrets 설정을 확인해주세요.")
+    st.error("Google Gemini API 키가 설정되지 않았습니다. Streamlit Secrets 설정을 확인해주세요.")
     st.stop()
 
 genai.configure(api_key=api_key)
 
 DATA_FILE = "problem_bank.json"
 SUBMISSION_FILE = "submissions.json"
-
-# --- GitHub 자동 동기화 (Commit) 함수 ---
-def commit_file_to_github(filename, content_str, commit_message):
-    if not github_token or not github_repo:
-        return False
-    
-    url = f"https://api.github.com/repos/{github_repo}/contents/{filename}"
-    headers = {
-        "Authorization": f"token {github_token}",
-        "Accept": "application/vnd.github.v3+json"
-    }
-    
-    # 1. 기존 파일의 SHA 값 가져오기
-    sha = None
-    res = requests.get(url, headers=headers)
-    if res.status_code == 200:
-        sha = res.json().get("sha")
-        
-    # 2. 내용 Base64 인코딩
-    content_b64 = base64.b64encode(content_str.encode("utf-8")).decode("utf-8")
-    
-    # 3. GitHub API로 파일 업로드 (Commit)
-    payload = {
-        "message": commit_message,
-        "content": content_b64
-    }
-    if sha:
-        payload["sha"] = sha
-        
-    put_res = requests.put(url, headers=headers, json=payload)
-    return put_res.status_code in [200, 201]
 
 # --- 기본 문제 데이터 생성 ---
 def get_default_bank():
@@ -105,14 +70,6 @@ def load_problem_bank():
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
                 parsed_data = {int(k): v for k, v in data.items()}
-                for i in range(1, 36):
-                    if i in parsed_data:
-                        if "q1" not in parsed_data[i]:
-                            parsed_data[i]["q1"] = "1. 지문의 핵심 키워드"
-                        if "q2" not in parsed_data[i]:
-                            parsed_data[i]["q2"] = "2. 주제 한 문장 요약"
-                        if "q3" not in parsed_data[i]:
-                            parsed_data[i]["q3"] = "3. 글의 흐름 세 문장 요약"
                 return parsed_data
         except Exception:
             pass
@@ -122,7 +79,6 @@ def save_problem_bank(data):
     json_str = json.dumps(data, ensure_ascii=False, indent=2)
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         f.write(json_str)
-    commit_file_to_github(DATA_FILE, json_str, "Update problem bank data")
 
 # --- 학생 제출 데이터 불러오기/저장 ---
 def load_submissions():
@@ -140,14 +96,13 @@ def save_submission(record):
     json_str = json.dumps(submissions, ensure_ascii=False, indent=2)
     with open(SUBMISSION_FILE, "w", encoding="utf-8") as f:
         f.write(json_str)
-    commit_file_to_github(SUBMISSION_FILE, json_str, f"Add student submission ({record['student']})")
 
-# 세션 데이터 초기화
+# 세션 데이터 초기화 (앱 실행 동안 메모리 유지)
 if "PROBLEM_BANK" not in st.session_state:
     st.session_state["PROBLEM_BANK"] = load_problem_bank()
 
 # --- 헤더 ---
-st.title("📖 영어 모의고사 독해 AI 피드백")
+st.title("📖 ENGLISH READING AI ASSISTANT")
 st.write("학번과 이름을 입력하고 문제를 선택하여 답변을 작성하세요.")
 
 # --- 학생 이름 입력 및 지문 선택 ---
@@ -169,7 +124,7 @@ selected_problem = st.session_state["PROBLEM_BANK"][selected_id]
 # --- 교사 전용 수정 및 조회 사이드바 ---
 with st.sidebar:
     st.header(f"⚙️ [교사용] {selected_id}번 문제 수정")
-    st.caption("수정 후 아래 [💾 변경사항 전체 저장] 버튼을 누르면 모든 학생에게 동기화 및 영구 저장됩니다.")
+    st.caption("수정 후 아래 [💾 변경사항 저장] 버튼을 누르면 설정이 즉시 반영됩니다.")
     
     new_title = st.text_input("문제 이름 (드롭다운 표시명)", value=selected_problem.get("title", ""), key=f"title_input_{selected_id}")
     
@@ -183,7 +138,7 @@ with st.sidebar:
     new_passage = st.text_area("영어 지문", height=180, value=selected_problem.get("passage", ""), key=f"passage_input_{selected_id}")
     new_key_points = st.text_area("모범 답안 / 핵심 요소 및 채점 기준", height=120, value=selected_problem.get("key_points", ""), key=f"key_input_{selected_id}")
 
-    if st.button("💾 변경사항 전체 저장", type="primary"):
+    if st.button("💾 변경사항 저장", type="primary"):
         st.session_state["PROBLEM_BANK"][selected_id]["title"] = new_title
         st.session_state["PROBLEM_BANK"][selected_id]["q1"] = q1_text
         st.session_state["PROBLEM_BANK"][selected_id]["q2"] = q2_text
@@ -191,9 +146,22 @@ with st.sidebar:
         st.session_state["PROBLEM_BANK"][selected_id]["passage"] = new_passage
         st.session_state["PROBLEM_BANK"][selected_id]["key_points"] = new_key_points
         
+        # 파일 및 세션에 저장
         save_problem_bank(st.session_state["PROBLEM_BANK"])
-        st.success("성공적으로 저장 및 GitHub 동기화되었습니다!")
+        st.success("수정 사항이 저장되었습니다!")
         st.rerun()
+
+    st.markdown("---")
+    st.header("📊 [교사용] 학생 답안 백업 / 데이터 관리")
+    
+    # 수정된 백업 파일 다운로드 기능
+    bank_json = json.dumps(st.session_state["PROBLEM_BANK"], ensure_ascii=False, indent=2)
+    st.download_button(
+        label="📥 문제 데이터 백업 파일 다운로드",
+        data=bank_json,
+        file_name="problem_bank_backup.json",
+        mime="application/json"
+    )
 
     st.markdown("---")
     st.header("📊 [교사용] 실시간 학생 답안 조회")
@@ -240,7 +208,7 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
     elif not (user_ans1 and user_ans2 and user_ans3):
         st.warning("모든 질문에 답을 작성한 뒤 버튼을 눌러주세요!")
     else:
-        with st.spinner("AI 선생님이 수능 출제 매커니즘에 기반하여 분석 중입니다..."):
+        with st.spinner("AI 어시스턴트가 수능 출제 매커니즘에 기반하여 분석 중입니다..."):
             prompt = f"""
             당신은 EBS '수능특강 Light 영어독해연습' 및 대학수학능력시험 영어영역에 매우 정통한 베테랑 고등학교 영어 교사입니다.
             제시된 지문은 '수능특강 Light 영어독해연습' 수준의 구문이며, 문제 유형은 수능 및 모의고사 출제 유형에 해당합니다.
@@ -275,7 +243,6 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
             """
 
             try:
-                # 구글 Gemini 공식 경량/고속 모델 적용
                 model = genai.GenerativeModel('gemini-3.1-flash-lite')
                 response = model.generate_content(prompt)
                 
@@ -293,7 +260,7 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
                 }
                 save_submission(record)
 
-                st.success("피드백 작성이 완료되었습니다! (GitHub 동기화 완료)")
+                st.success("피드백 작성이 완료되었습니다!")
                 st.markdown("### 📊 AI 피드백 결과")
                 st.write(feedback)
             except Exception as e:
