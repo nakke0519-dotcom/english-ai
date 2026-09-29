@@ -6,8 +6,9 @@ from datetime import datetime
 
 st.set_page_config(page_title="ENGLISH READING AI ASSISTANT", page_icon="📖", layout="wide")
 
-# --- API 키 확인 ---
+# --- API 키 및 비밀번호 확인 ---
 api_key = st.secrets.get("GEMINI_API_KEY")
+teacher_password = st.secrets.get("TEACHER_PASSWORD", "1234")  # 비밀번호 미설정 시 기본 1234
 
 if not api_key:
     st.error("Google Gemini API 키가 설정되지 않았습니다. Streamlit Secrets 설정을 확인해주세요.")
@@ -65,12 +66,12 @@ def get_default_bank():
 
 # --- 문제 데이터 불러오기/저장 ---
 def load_problem_bank():
+    # GitHub에 업로드된 json 파일이 우선 적용됩니다.
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                parsed_data = {int(k): v for k, v in data.items()}
-                return parsed_data
+                return {int(k): v for k, v in data.items()}
         except Exception:
             pass
     return get_default_bank()
@@ -101,23 +102,31 @@ def save_submission(record):
 if "PROBLEM_BANK" not in st.session_state:
     st.session_state["PROBLEM_BANK"] = load_problem_bank()
 
-# --- 교사 전용 수정 및 AI 온/오프 제어 사이드바 ---
-with st.sidebar:
-    st.header("🔒 [교사용] 시스템 제어")
-    
-    # AI 피드백 ON/OFF 토글 스위치 (기본값: OFF)
-    ai_enabled = st.toggle("🟢 AI 피드백 기능 활성화 (수업 중)", value=False)
-    
-    if ai_enabled:
-        st.success("STATUS: AI 피드백이 [활성화] 상태입니다.")
-    else:
-        st.info("STATUS: AI 피드백이 [비활성화] 상태입니다. (토큰 절약 중)")
-        
-    st.markdown("---")
+if "AI_ENABLED" not in st.session_state:
+    st.session_state["AI_ENABLED"] = False
 
-    selected_id_temp = 1  # 임시 지정
+# --- 사이드바: 교사 제어판 ---
+with st.sidebar:
+    st.header("🔒 [교사용] 관리자 제어판")
+    input_pwd = st.text_input("교사 비밀번호 입력", type="password")
     
-# --- 헤더 ---
+    is_teacher = (input_pwd == teacher_password)
+    
+    if is_teacher:
+        st.success("🔓 교사 인증 완료")
+        
+        # AI ON/OFF 토글 (ON/OFF 상태 전환)
+        ai_toggle = st.toggle("🟢 AI 피드백 활성화 (수업 중)", value=st.session_state["AI_ENABLED"])
+        st.session_state["AI_ENABLED"] = ai_toggle
+        
+        if st.session_state["AI_ENABLED"]:
+            st.info("STATUS: AI 피드백 사용 가능 (비용 발생 가능)")
+        else:
+            st.warning("STATUS: AI 피드백 차단 중 (토큰 절약)")
+    else:
+        st.error("비밀번호를 입력해야 교사 전용 제어판을 볼 수 있습니다.")
+
+# --- 메인 화면 ---
 st.title("📖 ENGLISH READING AI ASSISTANT")
 st.write("학번과 이름을 입력하고 문제를 선택하여 답변을 작성하세요.")
 
@@ -137,73 +146,43 @@ with col_select:
 selected_id = options_map[selected_option_label]
 selected_problem = st.session_state["PROBLEM_BANK"][selected_id]
 
-# --- 교사 문제 수정 영역 (사이드바 상세) ---
-with st.sidebar:
-    st.header(f"⚙️ {selected_id}번 문제 수정")
-    st.caption("수정 후 아래 [💾 변경사항 저장] 버튼을 누르면 설정이 즉시 반영됩니다.")
-    
-    new_title = st.text_input("문제 이름 (드롭다운 표시명)", value=selected_problem.get("title", ""), key=f"title_input_{selected_id}")
-    
-    st.markdown("---")
-    st.subheader("❓ 학생 질문 세부 설정")
-    q1_text = st.text_input("첫 번째 질문 발문", value=selected_problem.get("q1", "1. 지문의 핵심 키워드"), key=f"q1_in_{selected_id}")
-    q2_text = st.text_input("두 번째 질문 발문", value=selected_problem.get("q2", "2. 주제 한 문장 요약"), key=f"q2_in_{selected_id}")
-    q3_text = st.text_input("세 번째 질문 발문", value=selected_problem.get("q3", "3. 글의 흐름 세 문장 요약"), key=f"q3_in_{selected_id}")
-
-    st.markdown("---")
-    new_passage = st.text_area("영어 지문", height=180, value=selected_problem.get("passage", ""), key=f"passage_input_{selected_id}")
-    new_key_points = st.text_area("모범 답안 / 핵심 요소 및 채점 기준", height=120, value=selected_problem.get("key_points", ""), key=f"key_input_{selected_id}")
-
-    if st.button("💾 변경사항 저장", type="primary"):
-        st.session_state["PROBLEM_BANK"][selected_id]["title"] = new_title
-        st.session_state["PROBLEM_BANK"][selected_id]["q1"] = q1_text
-        st.session_state["PROBLEM_BANK"][selected_id]["q2"] = q2_text
-        st.session_state["PROBLEM_BANK"][selected_id]["q3"] = q3_text
-        st.session_state["PROBLEM_BANK"][selected_id]["passage"] = new_passage
-        st.session_state["PROBLEM_BANK"][selected_id]["key_points"] = new_key_points
+# --- 교사 전용 수정 및 백업 (인증된 교사만 접근) ---
+if is_teacher:
+    with st.sidebar:
+        st.markdown("---")
+        st.header(f"⚙️ {selected_id}번 문제 수정")
         
-        save_problem_bank(st.session_state["PROBLEM_BANK"])
-        st.success("수정 사항이 저장되었습니다!")
-        st.rerun()
+        new_title = st.text_input("문제 이름", value=selected_problem.get("title", ""), key=f"title_{selected_id}")
+        q1_text = st.text_input("첫 번째 질문", value=selected_problem.get("q1", "1. 지문의 핵심 키워드"), key=f"q1_{selected_id}")
+        q2_text = st.text_input("두 번째 질문", value=selected_problem.get("q2", "2. 주제 한 문장 요약"), key=f"q2_{selected_id}")
+        q3_text = st.text_input("세 번째 질문", value=selected_problem.get("q3", "3. 글의 흐름 세 문장 요약"), key=f"q3_{selected_id}")
+        new_passage = st.text_area("영어 지문", height=150, value=selected_problem.get("passage", ""), key=f"pass_{selected_id}")
+        new_key_points = st.text_area("채점 기준 / 모범 답안", height=100, value=selected_problem.get("key_points", ""), key=f"key_{selected_id}")
 
-    st.markdown("---")
-    st.header("📊 데이터 백업")
-    
-    bank_json = json.dumps(st.session_state["PROBLEM_BANK"], ensure_ascii=False, indent=2)
-    st.download_button(
-        label="📥 문제 데이터 백업 파일 다운로드",
-        data=bank_json,
-        file_name="problem_bank_backup.json",
-        mime="application/json"
-    )
-
-    st.markdown("---")
-    st.header("📊 실시간 학생 답안 조회")
-    submissions_data = load_submissions()
-    
-    if not submissions_data:
-        st.info("아직 제출된 학생 답안이 없습니다.")
-    else:
-        sorted_subs = sorted(submissions_data, key=lambda x: x.get("timestamp", ""), reverse=True)
-        sub_labels = [f"{sub['student']} - {sub['problem_title']} ({sub['timestamp']})" for sub in sorted_subs]
-        
-        selected_sub_label = st.selectbox("📋 제출 내역 선택", sub_labels)
-        selected_sub_idx = sub_labels.index(selected_sub_label)
-        sub_info = sorted_subs[selected_sub_idx]
-        
-        st.markdown(f"**👤 학생**: {sub_info['student']}")
-        st.markdown(f"**📖 지문**: {sub_info['problem_title']}")
-        st.markdown(f"**⏰ 제출 시간**: {sub_info['timestamp']}")
-        
-        with st.expander("📝 학생이 작성한 답안 보기", expanded=True):
-            st.write(f"**1. 키워드**: {sub_info['ans1']}")
-            st.write(f"**2. 주제 요약**: {sub_info['ans2']}")
-            st.write(f"**3. 흐름 요약**: {sub_info['ans3']}")
+        if st.button("💾 변경사항 적용", type="primary"):
+            st.session_state["PROBLEM_BANK"][selected_id]["title"] = new_title
+            st.session_state["PROBLEM_BANK"][selected_id]["q1"] = q1_text
+            st.session_state["PROBLEM_BANK"][selected_id]["q2"] = q2_text
+            st.session_state["PROBLEM_BANK"][selected_id]["q3"] = q3_text
+            st.session_state["PROBLEM_BANK"][selected_id]["passage"] = new_passage
+            st.session_state["PROBLEM_BANK"][selected_id]["key_points"] = new_key_points
             
-        with st.expander("🤖 전달된 AI 피드백 보기", expanded=False):
-            st.write(sub_info['feedback'])
+            save_problem_bank(st.session_state["PROBLEM_BANK"])
+            st.success("화면에 즉시 반영되었습니다!")
+            st.rerun()
 
-# --- 학생 입력 영역 ---
+        st.markdown("---")
+        st.header("📥 백업 파일 다운로드")
+        st.caption("수정본을 GitHub에 커밋할 수 있도록 백업 파일을 다운로드받으세요.")
+        bank_json = json.dumps(st.session_state["PROBLEM_BANK"], ensure_ascii=False, indent=2)
+        st.download_button(
+            label="problem_bank.json 다운로드",
+            data=bank_json,
+            file_name="problem_bank.json",
+            mime="application/json"
+        )
+
+# --- 학생 문제 풀기 영역 ---
 st.markdown("---")
 st.subheader(f"📝 {selected_problem['title']}")
 st.info(selected_problem['passage'])
@@ -217,9 +196,9 @@ with col2:
 
 # --- AI 피드백 생성 ---
 if st.button("🚀 AI 피드백 받기", type="primary"):
-    # 1. AI 기능 ON/OFF 체크 (OFF일 때 API 호출 차단)
-    if not ai_enabled:
-        st.error("🛑 현재는 AI 피드백 사용 시간이 아닙니다.")
+    # 스위치가 OFF일 경우 AI 호출을 원천 차단하여 토큰 소진 방지
+    if not st.session_state.get("AI_ENABLED", False):
+        st.error("🛑 현재는 AI 피드백 사용 시간이 아닙니다. 선생님의 안내에 따라 수업 시간에 이용해 주세요.")
     elif not student_name.strip():
         st.warning("상단에 학생 이름(학번)을 꼭 입력해 주세요!")
     elif not (user_ans1 and user_ans2 and user_ans3):
