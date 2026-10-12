@@ -4,12 +4,12 @@ import json
 import os
 from datetime import datetime, timedelta
 
-# 자동 새로고침 패키지 (없으면 자동 설치 시도)
+# 자동 새로고침 라이브러리 불러오기
 try:
     from streamlit_autorefresh import st_autorefresh
+    HAS_AUTOREFRESH = True
 except ImportError:
-    os.system("pip install streamlit-autorefresh")
-    from streamlit_autorefresh import st_autorefresh
+    HAS_AUTOREFRESH = False
 
 st.set_page_config(page_title="ENGLISH READING AI ASSISTANT", page_icon="📖", layout="wide")
 
@@ -56,7 +56,7 @@ def save_problem_bank(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         f.write(json_str)
 
-# --- 학생 제출 데이터 불러오기/저장 (60분 자동 삭제 로직 포함) ---
+# --- 학생 제출 데이터 불러오기/저장 (60분 자동 삭제 로직) ---
 def load_submissions():
     if os.path.exists(SUBMISSION_FILE):
         try:
@@ -86,12 +86,16 @@ def save_submission(record):
     with open(SUBMISSION_FILE, "w", encoding="utf-8") as f:
         f.write(json_str)
 
-# 세션 데이터 초기화
+# 세션 데이터 및 피드백 상태 초기화
 if "PROBLEM_BANK" not in st.session_state:
     st.session_state["PROBLEM_BANK"] = load_problem_bank()
 
 if "AI_ENABLED" not in st.session_state:
     st.session_state["AI_ENABLED"] = False
+
+# 💡 새로고침 되어도 피드백 결과를 유지하기 위한 세션 상태
+if "latest_feedback" not in st.session_state:
+    st.session_state["latest_feedback"] = None
 
 # --- 사이드바: 교사 제어판 ---
 with st.sidebar:
@@ -103,8 +107,9 @@ with st.sidebar:
     if is_teacher:
         st.success("🔓 교사 인증 완료")
         
-        # 교사 로그인 시 10초(10,000ms)마다 실시간 동기화 자동 실행
-        st_autorefresh(interval=10000, key="teacher_refresh")
+        # 교사 모드일 때만 10초 주기 자동 새로고침 동작
+        if HAS_AUTOREFRESH:
+            st_autorefresh(interval=10000, key="teacher_refresh")
         
         ai_toggle = st.toggle("🟢 AI 피드백 활성화 (수업 중)", value=st.session_state["AI_ENABLED"])
         st.session_state["AI_ENABLED"] = ai_toggle
@@ -163,7 +168,6 @@ if is_teacher:
 
         st.markdown("---")
         st.header("📊 실시간 학생 답안 조회 (최근 60분)")
-        st.caption("🔄 10초마다 자동으로 새로운 제출 내역이 동기화됩니다.")
         submissions_data = load_submissions()
         
         if not submissions_data:
@@ -271,9 +275,18 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
                 }
                 save_submission(record)
 
-                st.success("피드백 작성이 완료되었습니다!")
-                st.markdown("### 📊 AI 피드백 결과")
-                st.write(feedback)
+                # 💡 생성된 피드백을 세션 상태에 저장
+                st.session_state["latest_feedback"] = {
+                    "problem_title": selected_problem['title'],
+                    "content": feedback
+                }
+
             except Exception as e:
                 st.error(f"오류가 발생했습니다: {e}")
-                
+
+# 💡 세션 상태에 피드백이 저장되어 있다면 새로고침 후에도 유지하여 출력
+if st.session_state["latest_feedback"]:
+    st.markdown("---")
+    st.success("피드백 작성이 완료되었습니다!")
+    st.markdown(f"### 📊 AI 피드백 결과 ({st.session_state['latest_feedback']['problem_title']})")
+    st.write(st.session_state["latest_feedback"]["content"])
