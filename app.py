@@ -4,6 +4,13 @@ import json
 import os
 from datetime import datetime, timedelta
 
+# 자동 새로고침 패키지 (없으면 자동 설치 시도)
+try:
+    from streamlit_autorefresh import st_autorefresh
+except ImportError:
+    os.system("pip install streamlit-autorefresh")
+    from streamlit_autorefresh import st_autorefresh
+
 st.set_page_config(page_title="ENGLISH READING AI ASSISTANT", page_icon="📖", layout="wide")
 
 # --- API 키 및 비밀번호 확인 ---
@@ -96,6 +103,9 @@ with st.sidebar:
     if is_teacher:
         st.success("🔓 교사 인증 완료")
         
+        # 교사 로그인 시 10초(10,000ms)마다 실시간 동기화 자동 실행
+        st_autorefresh(interval=10000, key="teacher_refresh")
+        
         ai_toggle = st.toggle("🟢 AI 피드백 활성화 (수업 중)", value=st.session_state["AI_ENABLED"])
         st.session_state["AI_ENABLED"] = ai_toggle
         
@@ -153,6 +163,7 @@ if is_teacher:
 
         st.markdown("---")
         st.header("📊 실시간 학생 답안 조회 (최근 60분)")
+        st.caption("🔄 10초마다 자동으로 새로운 제출 내역이 동기화됩니다.")
         submissions_data = load_submissions()
         
         if not submissions_data:
@@ -265,3 +276,4 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
                 st.write(feedback)
             except Exception as e:
                 st.error(f"오류가 발생했습니다: {e}")
+                
