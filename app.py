@@ -2,13 +2,13 @@ import streamlit as st
 import google.generativeai as genai
 import json
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 st.set_page_config(page_title="ENGLISH READING AI ASSISTANT", page_icon="📖", layout="wide")
 
 # --- API 키 및 비밀번호 확인 ---
 api_key = st.secrets.get("GEMINI_API_KEY")
-teacher_password = st.secrets.get("TEACHER_PASSWORD", "rnswltk1!")  # 비밀번호 미설정 시 기본 1234
+teacher_password = st.secrets.get("TEACHER_PASSWORD", "1234")
 
 if not api_key:
     st.error("Google Gemini API 키가 설정되지 않았습니다. Streamlit Secrets 설정을 확인해주세요.")
@@ -22,51 +22,19 @@ SUBMISSION_FILE = "submissions.json"
 # --- 기본 문제 데이터 생성 ---
 def get_default_bank():
     default_bank = {}
-    default_bank[1] = {
-        "title": "지문 1: 일기 쓰기와 스트레스 관리",
-        "q1": "1. 지문의 핵심 키워드",
-        "q2": "2. 주제 한 문장 요약",
-        "q3": "3. 글의 흐름 세 문장 요약",
-        "passage": """Research shows that people who keep a journal regularly tend to manage stress better than those who do not. Writing down thoughts and feelings helps process complex emotions and reduces psychological burden. Furthermore, it offers an opportunity to reflect on daily activities and improve decision-making skills.""",
-        "key_points": """- 키워드: Journaling, Stress management, Reflect
-- 주제: 일기 쓰기가 스트레스 해소 및 감정 정리에 미치는 긍정적 영향
-- 흐름: 연구 결과 소개 -> 일기 쓰기의 감정적 이점 -> 반성 및 의사결정 능력 향상으로 연결"""
-    }
-    default_bank[2] = {
-        "title": "지문 2: 수면과 기억력의 관계",
-        "q1": "1. 지문의 핵심 키워드",
-        "q2": "2. 주제 한 문장 요약",
-        "q3": "3. 글의 흐름 세 문장 요약",
-        "passage": """Sleep plays a crucial role in consolidating memories formed during the day. When we sleep, the brain reorganizes and stores information into long-term memory. Lack of sleep impairs attention, working memory, and logical reasoning, leading to lower academic performance.""",
-        "key_points": """- 키워드: Sleep, Memory consolidation, Brain
-- 주제: 수면이 기억 저장 및 학습 능력 향상에 미치는 중요성
-- 흐름: 수면의 기억 저장 역할 -> 뇌의 정보 정리 과정 -> 수면 부족 시 나타나는 부정적 영향"""
-    }
-    default_bank[3] = {
-        "title": "지문 3: 기술 발달과 환경 문제",
-        "q1": "1. 지문의 핵심 키워드",
-        "q2": "2. 주제 한 문장 요약",
-        "q3": "3. 글의 흐름 세 문장 요약",
-        "passage": """While technological advancements have made human life more convenient, they have also contributed to severe environmental degradation. Electronic waste and high energy consumption by data centers pose significant challenges. Therefore, sustainable technological innovations are urgently required.""",
-        "key_points": """- 키워드: Technology, Environmental degradation, Sustainability
-- 주제: 기술 발전이 가져온 환경적 문제와 지속 가능한 혁신의 필요성
-- 흐름: 기술 발전의 편의성 -> 전자기기 쓰레기 및 에너지 소비 등 부작용 -> 지속 가능한 기술 개발 촉구"""
-    }
-
-    for i in range(4, 36):
+    for i in range(1, 36):
         default_bank[i] = {
             "title": f"지문 {i}: (제목을 입력하세요)",
             "q1": "1. 지문의 핵심 키워드",
             "q2": "2. 주제 한 문장 요약",
             "q3": "3. 글의 흐름 세 문장 요약",
             "passage": f"여기에 {i}번 영어 지문을 입력하세요.",
-            "key_points": "- 키워드: \n- 주제: \n- 흐름: "
+            "key_points": ""
         }
     return default_bank
 
 # --- 문제 데이터 불러오기/저장 ---
 def load_problem_bank():
-    # GitHub에 업로드된 json 파일이 우선 적용됩니다.
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -81,18 +49,33 @@ def save_problem_bank(data):
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         f.write(json_str)
 
-# --- 학생 제출 데이터 불러오기/저장 ---
+# --- 학생 제출 데이터 불러오기/저장 (60분 자동 삭제 로직 포함) ---
 def load_submissions():
     if os.path.exists(SUBMISSION_FILE):
         try:
             with open(SUBMISSION_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                submissions = json.load(f)
+                
+            # 현재 시간 기준 60분 이내의 제출 데이터만 남김
+            now = datetime.now()
+            valid_submissions = []
+            for sub in submissions:
+                sub_time = datetime.strptime(sub["timestamp"], "%Y-%m-%d %H:%M:%S")
+                if now - sub_time <= timedelta(minutes=60):
+                    valid_submissions.append(sub)
+                    
+            # 만약 만료된 데이터가 삭제되었다면 파일 업데이트
+            if len(valid_submissions) != len(submissions):
+                with open(SUBMISSION_FILE, "w", encoding="utf-8") as f:
+                    json.dump(valid_submissions, f, ensure_ascii=False, indent=2)
+                    
+            return valid_submissions
         except Exception:
             pass
     return []
 
 def save_submission(record):
-    submissions = load_submissions()
+    submissions = load_submissions()  # 만료된 데이터 걸러낸 후 추가
     submissions.append(record)
     json_str = json.dumps(submissions, ensure_ascii=False, indent=2)
     with open(SUBMISSION_FILE, "w", encoding="utf-8") as f:
@@ -115,12 +98,12 @@ with st.sidebar:
     if is_teacher:
         st.success("🔓 교사 인증 완료")
         
-        # AI ON/OFF 토글 (ON/OFF 상태 전환)
+        # AI ON/OFF 토글
         ai_toggle = st.toggle("🟢 AI 피드백 활성화 (수업 중)", value=st.session_state["AI_ENABLED"])
         st.session_state["AI_ENABLED"] = ai_toggle
         
         if st.session_state["AI_ENABLED"]:
-            st.info("STATUS: AI 피드백 사용 가능 (비용 발생 가능)")
+            st.info("STATUS: AI 피드백 사용 가능")
         else:
             st.warning("STATUS: AI 피드백 차단 중 (토큰 절약)")
     else:
@@ -146,7 +129,7 @@ with col_select:
 selected_id = options_map[selected_option_label]
 selected_problem = st.session_state["PROBLEM_BANK"][selected_id]
 
-# --- 교사 전용 수정 및 백업 (인증된 교사만 접근) ---
+# --- 교사 전용 수정, 백업 및 실시간 피드백 조회 ---
 if is_teacher:
     with st.sidebar:
         st.markdown("---")
@@ -157,7 +140,7 @@ if is_teacher:
         q2_text = st.text_input("두 번째 질문", value=selected_problem.get("q2", "2. 주제 한 문장 요약"), key=f"q2_{selected_id}")
         q3_text = st.text_input("세 번째 질문", value=selected_problem.get("q3", "3. 글의 흐름 세 문장 요약"), key=f"q3_{selected_id}")
         new_passage = st.text_area("영어 지문", height=150, value=selected_problem.get("passage", ""), key=f"pass_{selected_id}")
-        new_key_points = st.text_area("채점 기준 / 모범 답안", height=100, value=selected_problem.get("key_points", ""), key=f"key_{selected_id}")
+        new_key_points = st.text_area("추가 지시사항 / 채점 주의사항 (선택사항)", height=80, value=selected_problem.get("key_points", ""), key=f"key_{selected_id}", placeholder="특별히 강조할 키워드나 평가 방향이 있는 경우만 작성하세요. 비워두면 AI가 직접 지문을 분석합니다.")
 
         if st.button("💾 변경사항 적용", type="primary"):
             st.session_state["PROBLEM_BANK"][selected_id]["title"] = new_title
@@ -170,6 +153,32 @@ if is_teacher:
             save_problem_bank(st.session_state["PROBLEM_BANK"])
             st.success("화면에 즉시 반영되었습니다!")
             st.rerun()
+
+        st.markdown("---")
+        st.header("📊 실시간 학생 답안 조회 (최근 60분)")
+        submissions_data = load_submissions()
+        
+        if not submissions_data:
+            st.info("최근 60분 이내에 제출된 학생 답안이 없습니다.")
+        else:
+            sorted_subs = sorted(submissions_data, key=lambda x: x.get("timestamp", ""), reverse=True)
+            sub_labels = [f"{sub['student']} - {sub['problem_title']} ({sub['timestamp'].split()[1]})" for sub in sorted_subs]
+            
+            selected_sub_label = st.selectbox("📋 제출 내역 선택", sub_labels)
+            selected_sub_idx = sub_labels.index(selected_sub_label)
+            sub_info = sorted_subs[selected_sub_idx]
+            
+            st.markdown(f"**👤 학생**: {sub_info['student']}")
+            st.markdown(f"**📖 지문**: {sub_info['problem_title']}")
+            st.markdown(f"**⏰ 제출 시간**: {sub_info['timestamp']}")
+            
+            with st.expander("📝 학생 작성 답안 보기", expanded=True):
+                st.write(f"**1. 키워드**: {sub_info['ans1']}")
+                st.write(f"**2. 주제 요약**: {sub_info['ans2']}")
+                st.write(f"**3. 흐름 요약**: {sub_info['ans3']}")
+                
+            with st.expander("🤖 전달된 AI 피드백 보기", expanded=False):
+                st.write(sub_info['feedback'])
 
         st.markdown("---")
         st.header("📥 백업 파일 다운로드")
@@ -196,7 +205,6 @@ with col2:
 
 # --- AI 피드백 생성 ---
 if st.button("🚀 AI 피드백 받기", type="primary"):
-    # 스위치가 OFF일 경우 AI 호출을 원천 차단하여 토큰 소진 방지
     if not st.session_state.get("AI_ENABLED", False):
         st.error("🛑 현재는 AI 피드백 사용 시간이 아닙니다. 선생님의 안내에 따라 수업 시간에 이용해 주세요.")
     elif not student_name.strip():
@@ -205,17 +213,22 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
         st.warning("모든 질문에 답을 작성한 뒤 버튼을 눌러주세요!")
     else:
         with st.spinner("AI 선생님이 수능 출제 매커니즘에 기반하여 분석 중입니다..."):
+            
+            key_points_prompt = selected_problem.get('key_points', '').strip()
+            if not key_points_prompt:
+                key_points_prompt = "별도의 모범 답안이 지정되지 않았습니다. 지문의 내용과 구문 맥락을 AI가 직접 정확히 해석 및 평가하여 정답 여부를 판정하세요."
+
             prompt = f"""
             당신은 EBS '수능특강 Light 영어독해연습' 및 대학수학능력시험 영어영역에 매우 정통한 베테랑 고등학교 영어 교사입니다.
             제시된 지문은 '수능특강 Light 영어독해연습' 수준의 구문이며, 문제 유형은 수능 및 모의고사 출제 유형에 해당합니다.
 
-            학생이 작성한 답안을 바탕으로 다음과 같은 기준에 맞추어 전문적이고 친절한 피드백을 제공해주세요.
+            제시된 [영어 지문]을 스스로 정확히 분석하여, 학생이 작성한 답안을 기준에 맞추어 전문적이고 친절하게 피드백 해주세요.
 
             [영어 지문]
             {selected_problem['passage']}
 
-            [모범 답안 및 채점 기준]
-            {selected_problem['key_points']}
+            [교사의 추가 지시사항 및 특이 채점 기준]
+            {key_points_prompt}
 
             [학생이 작성한 질문 및 답안]
             - 질문 1: {selected_problem.get('q1')}
@@ -231,33 +244,4 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
                - 문제 유형과 관계없이 학생이 글의 핵심 주제와 키워드를 얼마나 정확하게 파악했는지 평가해주세요.
             3. **수능/모의고사 접근 전략 제시**:
                - 해당 지문과 수능 유형 문제를 풀기 위해 학생이 어떻게 접근해야 했는지, 글을 읽을 때 어떤 요소(접속사, 대조 구조, 핵심 소재 등)를 중점적으로 살펴야 하는지 전략적으로 설명해주세요.
-            4. **오답 요인 예측 및 분석 (오답이 있는 경우)**:
-               - 학생이 오답이나 아쉬운 답변을 냈다면, 왜 지문의 특정 부분에 낚이거나 헷갈렸을지(예: 일부 단어에만 얽매임, 부분적 해석 오류 등) 원인을 추측해 분석해 주세요.
-               - 왜 그것이 오답이며 정답 기준과 어떤 차이가 있는지 확실한 근거를 지문 기반으로 제시해 주세요.
-            5. **따뜻한 총평 및 실전 한 줄 조언**:
-               - 잘한 점을 격려하고 다음 실전 풀이 시 유용한 한 줄 팁을 남겨주세요.
-            """
-
-            try:
-                model = genai.GenerativeModel('gemini-3.1-flash-lite')
-                response = model.generate_content(prompt)
-                
-                feedback = response.text
-                
-                record = {
-                    "student": student_name.strip(),
-                    "problem_id": selected_id,
-                    "problem_title": selected_problem['title'],
-                    "ans1": user_ans1,
-                    "ans2": user_ans2,
-                    "ans3": user_ans3,
-                    "feedback": feedback,
-                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                }
-                save_submission(record)
-
-                st.success("피드백 작성이 완료되었습니다!")
-                st.markdown("### 📊 AI 피드백 결과")
-                st.write(feedback)
-            except Exception as e:
-                st.error(f"오류가 발생했습니다: {e}")
+            4. **오답 요인 예측 및 분석 (오
