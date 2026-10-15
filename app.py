@@ -50,7 +50,6 @@ def load_problem_bank():
                 parsed_data = {}
                 for k, v in data.items():
                     key_num = int(k)
-                    # 누락된 필드 자동 보완
                     parsed_data[key_num] = {
                         "title": v.get("title", f"지문 {key_num}"),
                         "q1": v.get("q1", "1. 지문의 핵심 키워드"),
@@ -59,7 +58,6 @@ def load_problem_bank():
                         "passage": v.get("passage", f"여기에 {key_num}번 지문을 입력하세요."),
                         "key_points": v.get("key_points", "")
                     }
-                # 1~35번 중 빠진 번호가 있다면 기본값 채워넣기
                 for i in range(1, 36):
                     if i not in parsed_data:
                         parsed_data[i] = default_bank[i]
@@ -134,7 +132,6 @@ col_student, col_select = st.columns([1, 2])
 with col_student:
     student_name = st.text_input("👤 학생 이름 (예: 10101 홍길동)", placeholder="학번과 이름을 입력하세요")
 
-# 드롭다운 옵션 구성
 options_map = {}
 for i in range(1, 36):
     prob = st.session_state['PROBLEM_BANK'].get(i, {})
@@ -290,8 +287,14 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
             except Exception as e:
                 st.error(f"오류가 발생했습니다: {e}")
 
-# 세션 상태에 저장된 피드백 출력 (새로고침 시에도 유지)
-if st.session_state["latest_feedback"]:
+# --- 세션 상태에 저장된 피드백 출력 ---
+if st.session_state.get("latest_feedback"):
+    fb_data = st.session_state["latest_feedback"]
+    p_title = fb_data.get("problem_title", "")
+    p_content = fb_data.get("content", "")
+    
     st.markdown("---")
     st.success("피드백 작성이 완료되었습니다!")
-    st.markdown(f"### 📊 AI 피드백 결과 ({st.session_state
+    st.markdown(f"### 📊 AI 피드백 결과 ({p_title})")
+    st.write(p_content)
+    
