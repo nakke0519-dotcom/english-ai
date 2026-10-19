@@ -4,6 +4,13 @@ import json
 import os
 from datetime import datetime, timedelta
 
+# GitHub API 라이브러리 불러오기
+try:
+    from github import Github
+    HAS_GITHUB = True
+except ImportError:
+    HAS_GITHUB = False
+
 # 자동 새로고침 라이브러리 불러오기
 try:
     from streamlit_autorefresh import st_autorefresh
@@ -15,7 +22,9 @@ st.set_page_config(page_title="ENGLISH READING AI ASSISTANT", page_icon="📖", 
 
 # --- API 키 및 비밀번호 확인 ---
 api_key = st.secrets.get("GEMINI_API_KEY")
-teacher_password = st.secrets.get("TEACHER_PASSWORD")
+teacher_password = st.secrets.get("TEACHER_PASSWORD", "rnswltk1!")
+github_token = st.secrets.get("GITHUB_TOKEN")
+github_repo_name = st.secrets.get("GITHUB_REPO")
 
 if not api_key:
     st.error("Google Gemini API 키가 설정되지 않았습니다. Streamlit Secrets 설정을 확인해주세요.")
@@ -40,7 +49,7 @@ def get_default_bank():
         }
     return default_bank
 
-# --- 문제 데이터 안전하게 불러오기/저장 ---
+# --- 문제 데이터 안전하게 불러오기 ---
 def load_problem_bank():
     default_bank = get_default_bank()
     if os.path.exists(DATA_FILE):
@@ -67,10 +76,38 @@ def load_problem_bank():
             pass
     return default_bank
 
+# --- GitHub에 problem_bank.json 커밋 및 저장 ---
 def save_problem_bank(data):
     json_str = json.dumps(data, ensure_ascii=False, indent=2)
+    
+    # 1. 로컬/서버 파일 저장
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         f.write(json_str)
+
+    # 2. GitHub 저장소에 자동 커밋 및 연동
+    if HAS_GITHUB and github_token and github_repo_name:
+        try:
+            g = Github(github_token)
+            repo = g.get_repo(github_repo_name)
+            
+            try:
+                contents = repo.get_contents(DATA_FILE)
+                repo.update_file(
+                    path=DATA_FILE,
+                    message=f"Update problem_bank.json via Web Editor ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
+                    content=json_str,
+                    sha=contents.sha
+                )
+            except Exception:
+                repo.create_file(
+                    path=DATA_FILE,
+                    message=f"Create problem_bank.json via Web Editor ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
+                    content=json_str
+                )
+            return True, "GitHub 커밋 및 영구 저장이 완료되었습니다!"
+        except Exception as e:
+            return False, f"로컬 저장은 완료되었으나 GitHub 동기화 실패: {e}"
+    return True, "로컬 세션에 저장되었습니다. (GitHub 설정 미완료)"
 
 # --- 학생 제출 데이터 불러오기/저장 (60분 자동 삭제) ---
 def load_submissions():
@@ -114,7 +151,7 @@ with st.sidebar:
     st.header("🔒 [교사용] 관리자 제어판")
     input_pwd = st.text_input("교사 비밀번호 입력", type="password")
     
-    is_teacher = (input_pwd == teacher_password)
+    is_teacher = (input_pwd == teacher_password) if teacher_password else False
     
     if is_teacher:
         st.success("🔓 교사 인증 완료")
@@ -160,7 +197,7 @@ if is_teacher:
         new_passage = st.text_area("영어 지문", height=150, value=selected_problem.get("passage", ""), key=f"pass_{selected_id}")
         new_key_points = st.text_area("추가 지시사항 / 채점 주의사항 (선택사항)", height=80, value=selected_problem.get("key_points", ""), key=f"key_{selected_id}", placeholder="특별히 강조할 키워드나 평가 방향이 있는 경우만 작성하세요. 비워두면 AI가 직접 지문을 분석합니다.")
 
-        if st.button("💾 변경사항 적용", type="primary"):
+        if st.button("💾 변경사항 적용 및 GitHub 영구 저장", type="primary"):
             st.session_state["PROBLEM_BANK"][selected_id]["title"] = new_title
             st.session_state["PROBLEM_BANK"][selected_id]["q1"] = q1_text
             st.session_state["PROBLEM_BANK"][selected_id]["q2"] = q2_text
@@ -168,8 +205,11 @@ if is_teacher:
             st.session_state["PROBLEM_BANK"][selected_id]["passage"] = new_passage
             st.session_state["PROBLEM_BANK"][selected_id]["key_points"] = new_key_points
             
-            save_problem_bank(st.session_state["PROBLEM_BANK"])
-            st.success("화면에 즉시 반영되었습니다!")
+            success, msg = save_problem_bank(st.session_state["PROBLEM_BANK"])
+            if success:
+                st.success(msg)
+            else:
+                st.warning(msg)
             st.rerun()
 
         st.markdown("---")
@@ -200,7 +240,6 @@ if is_teacher:
 
         st.markdown("---")
         st.header("📥 백업 파일 다운로드")
-        st.caption("수정본을 GitHub에 커밋할 수 있도록 백업 파일을 다운로드받으세요.")
         bank_json = json.dumps(st.session_state["PROBLEM_BANK"], ensure_ascii=False, indent=2)
         st.download_button(
             label="problem_bank.json 다운로드",
