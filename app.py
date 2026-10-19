@@ -85,29 +85,33 @@ def save_problem_bank(data):
         f.write(json_str)
 
     # 2. GitHub 저장소에 자동 커밋 및 연동
-    if HAS_GITHUB and github_token and github_repo_name:
+    if not github_token or not github_repo_name:
+        return False, "⚠️ Streamlit Secrets에 GITHUB_TOKEN 또는 GITHUB_REPO가 설정되지 않았습니다."
+
+    if not HAS_GITHUB:
+        return False, "⚠️ PyGithub 라이브러리가 설치되지 않았습니다. (requirements.txt 확인 필요)"
+
+    try:
+        g = Github(github_token)
+        repo = g.get_repo(github_repo_name.strip())
+        
         try:
-            g = Github(github_token)
-            repo = g.get_repo(github_repo_name)
-            
-            try:
-                contents = repo.get_contents(DATA_FILE)
-                repo.update_file(
-                    path=DATA_FILE,
-                    message=f"Update problem_bank.json via Web Editor ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
-                    content=json_str,
-                    sha=contents.sha
-                )
-            except Exception:
-                repo.create_file(
-                    path=DATA_FILE,
-                    message=f"Create problem_bank.json via Web Editor ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
-                    content=json_str
-                )
-            return True, "GitHub 커밋 및 영구 저장이 완료되었습니다!"
-        except Exception as e:
-            return False, f"로컬 저장은 완료되었으나 GitHub 동기화 실패: {e}"
-    return True, "로컬 세션에 저장되었습니다. (GitHub 설정 미완료)"
+            contents = repo.get_contents(DATA_FILE)
+            repo.update_file(
+                path=DATA_FILE,
+                message=f"Update problem_bank.json via Web Editor ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
+                content=json_str,
+                sha=contents.sha
+            )
+        except Exception:
+            repo.create_file(
+                path=DATA_FILE,
+                message=f"Create problem_bank.json via Web Editor ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
+                content=json_str
+            )
+        return True, "✅ GitHub 저장소에 problem_bank.json 자동 커밋이 완료되었습니다!"
+    except Exception as e:
+        return False, f"❌ GitHub 연동 오류 발생: {e}"
 
 # --- 학생 제출 데이터 불러오기/저장 (60분 자동 삭제) ---
 def load_submissions():
@@ -209,7 +213,7 @@ if is_teacher:
             if success:
                 st.success(msg)
             else:
-                st.warning(msg)
+                st.error(msg)
             st.rerun()
 
         st.markdown("---")
