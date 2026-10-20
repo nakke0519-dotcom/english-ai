@@ -51,7 +51,6 @@ def get_default_bank():
     return default_bank
 
 def get_default_vocab_dict():
-    # 1~35번 지문별 기본 단어 데이터
     vocab_dict = {}
     for i in range(1, 36):
         vocab_dict[i] = [
@@ -195,6 +194,9 @@ if "VOCAB_DICT" not in st.session_state or not st.session_state["VOCAB_DICT"]:
 if "latest_feedback" not in st.session_state:
     st.session_state["latest_feedback"] = None
 
+if "ai_hints" not in st.session_state:
+    st.session_state["ai_hints"] = {}
+
 # --- 사이드바: 교사 제어판 ---
 with st.sidebar:
     st.header("🔒 [교사용] 관리자 제어판")
@@ -233,12 +235,12 @@ selected_id = options_map[selected_option_label]
 selected_problem = st.session_state["PROBLEM_BANK"][selected_id]
 current_vocab_list = st.session_state["VOCAB_DICT"].get(selected_id, [])
 
-# --- 교사 전용 관리 제어판 (접이식 메뉴 적용) ---
+# --- 교사 전용 관리 제어판 (접이식 메뉴) ---
 if is_teacher:
     with st.sidebar:
         st.markdown("---")
         
-        # 1. 학생 답안 조회 (수업 공유용 - 기본 열림)
+        # 1. 학생 답안 조회 (수업 공유용)
         with st.expander("📊 실시간 학생 답안 조회 (최근 60분)", expanded=True):
             submissions_data = load_submissions()
             if not submissions_data:
@@ -263,7 +265,7 @@ if is_teacher:
                 with st.expander("🤖 전달된 AI 피드백 보기", expanded=False):
                     st.write(sub_info['feedback'])
 
-        # 2. 지문 및 문제 수정 (기본 닫힘 - 수업 시 숨김 가능)
+        # 2. 지문 및 문제 수정
         with st.expander(f"⚙️ {selected_id}번 지문 및 문제 수정", expanded=False):
             new_title = st.text_input("문제 이름", value=selected_problem.get("title", ""), key=f"title_{selected_id}")
             q1_text = st.text_input("첫 번째 질문", value=selected_problem.get("q1", "1. 지문의 핵심 키워드"), key=f"q1_{selected_id}")
@@ -287,7 +289,7 @@ if is_teacher:
                     st.error(msg)
                 st.rerun()
 
-        # 3. 지문별 수업 전 단어 테스트 관리 (기본 닫힘)
+        # 3. 지문별 수업 전 단어 테스트 관리
         with st.expander(f"🔤 [{selected_id}번 지문] 단어 테스트 관리", expanded=False):
             current_vocab_str = "\n".join([f"{item['word']} : {item['meaning']}" for item in current_vocab_list])
             new_vocab_raw = st.text_area("단어 : 뜻 (한 줄에 하나씩 작성)", value=current_vocab_str, height=180, key=f"v_edit_{selected_id}", help="예시:\ncrucial : 중요한\nperspective : 관점")
@@ -337,6 +339,33 @@ with st.expander(f"📝 [수업 전 3분] {selected_id}번 지문 핵심 영단�
 st.markdown("---")
 st.subheader(f"📝 {selected_problem['title']}")
 st.info(selected_problem['passage'])
+
+# 💡 AI 도우미 콜업 버튼
+col_hint_btn, _ = st.columns([1, 2])
+with col_hint_btn:
+    if st.button("💡 너무 어려워요! AI 도우미 콜업", key=f"hint_btn_{selected_id}"):
+        with st.spinner("AI 도우미가 지문의 힌트와 어려운 표현을 정리 중입니다..."):
+            hint_prompt = (
+                "당신은 친절한 고등학교 영어 교사입니다.\n"
+                "학생이 아래 지문을 해석하거나 독해하기 어려워하고 있습니다.\n"
+                "학생의 독해 공부를 돕기 위해 다음 두 가지를 친절하고 읽기 쉽게 작성해 주세요.\n\n"
+                f"[영어 지문]\n{selected_problem['passage']}\n\n"
+                "[요청사항]\n"
+                "1. **💡 이 글은 이런 내용이에요 (소재/주제 방향 힌트)**:\n"
+                "   - 직접적인 정답 전체를 말해주지 말고, '이 글은 ~에 대한 내용이야'처럼 글의 배경이나 중심 소재를 한두 문장으로 쉽게 설명해 주세요.\n"
+                "2. **🔤 지문 속 꼭 알아야 할 어려운 단어 & 표현 Top 4**: \n"
+                "   - 지문에 등장하는 구문 중 학생들이 헷갈리기 쉬운 단어/숙어 표현 3~4개를 골라 '영어 단어 (뜻)' 형태로 알려주세요."
+            )
+            try:
+                model = genai.GenerativeModel('gemini-3.1-flash-lite')
+                hint_response = model.generate_content(hint_prompt)
+                st.session_state["ai_hints"][selected_id] = hint_response.text
+            except Exception as e:
+                st.error(f"힌트를 불러오는 중 오류가 발생했습니다: {e}")
+
+# 💡 생성된 힌트 출력 상자
+if selected_id in st.session_state["ai_hints"]:
+    st.warning(f"### 🤖 AI 도우미의 힌트 상자\n{st.session_state['ai_hints'][selected_id]}")
 
 col1, col2 = st.columns(2)
 with col1:
