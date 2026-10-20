@@ -1,38 +1,504 @@
-[
-  {
-    "word": "enthusiastic",
-    "meaning": "열정적인, 열렬한"
-  },
-  {
-    "word": "diverge",
-    "meaning": "분열하다, 갈라지다"
-  },
-  {
-    "word": "reshape",
-    "meaning": "재구조화하다"
-  },
-  {
-    "word": "magnify",
-    "meaning": "확대하다"
-  },
-  {
-    "word": "innate",
-    "meaning": "선천적인"
-  },
-  {
-    "word": "intricate",
-    "meaning": "복잡한, 얽힌"
-  },
-  {
-    "word": "first and foremost",
-    "meaning": "무엇보다도"
-  },
-  {
-    "word": "intense",
-    "meaning": "강렬한, 격한"
-  },
-  {
-    "word": "life expectancy",
-    "meaning": "기대 수명"
-  }
-]
+{
+  "1": [
+    {
+      "word": "enthusiast",
+      "meaning": "애호가, 열정적인 사람"
+    },
+    {
+      "word": "specific",
+      "meaning": "구체적인, 특정적인"
+    },
+    {
+      "word": "contribute",
+      "meaning": "기여하다, 구성하다, 가하다"
+    },
+    {
+      "word": "emit",
+      "meaning": "방출하다"
+    },
+    {
+      "word": "revolve",
+      "meaning": "회전하다, 공전하다"
+    },
+    {
+      "word": "unique",
+      "meaning": "독특한, 유일무이한"
+    }
+  ],
+  "2": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "3": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "4": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "5": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "6": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "7": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "8": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "9": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "10": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "11": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "12": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "13": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "14": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "15": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "16": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "17": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "18": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "19": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "20": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "21": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "22": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "23": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "24": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "25": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "26": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "27": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "28": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "29": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "30": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "31": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "32": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "33": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "34": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ],
+  "35": [
+    {
+      "word": "crucial",
+      "meaning": "중요한, 결정적인"
+    },
+    {
+      "word": "perspective",
+      "meaning": "관점, 시각"
+    },
+    {
+      "word": "emphasize",
+      "meaning": "강조하다"
+    }
+  ]
+}
