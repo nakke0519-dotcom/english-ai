@@ -220,79 +220,78 @@ with col_select:
 selected_id = options_map[selected_option_label]
 selected_problem = st.session_state["PROBLEM_BANK"][selected_id]
 
-# --- 교사 전용 관리 제어판 (지문 및 단어 수정) ---
+# --- 교사 전용 관리 제어판 (접이식 메뉴 적용) ---
 if is_teacher:
     with st.sidebar:
         st.markdown("---")
-        st.header("🔤 수업 전 단어 테스트 관리")
         
-        # 기존 단어를 텍스트 형식으로 파싱
-        current_vocab_str = "\n".join([f"{item['word']} : {item['meaning']}" for item in st.session_state["VOCAB_LIST"]])
-        new_vocab_raw = st.text_area("단어 : 뜻 (한 줄에 하나씩 작성)", value=current_vocab_str, height=180, help="예시:\ncrucial : 중요한\nperspective : 관점")
-        
-        if st.button("💾 단어 목록 저장 및 반영", type="primary"):
-            new_vocab_list = []
-            for line in new_vocab_raw.strip().split("\n"):
-                if ":" in line:
-                    w, m = line.split(":", 1)
-                    new_vocab_list.append({"word": w.strip(), "meaning": m.strip()})
-                elif line.strip():
-                    new_vocab_list.append({"word": line.strip(), "meaning": ""})
-            
-            st.session_state["VOCAB_LIST"] = new_vocab_list
-            save_vocab(new_vocab_list)
-            st.success("단어 테스트 목록이 수정 및 저장되었습니다!")
-            st.rerun()
-
-        st.markdown("---")
-        st.header(f"⚙️ {selected_id}번 지문 수정")
-        
-        new_title = st.text_input("문제 이름", value=selected_problem.get("title", ""), key=f"title_{selected_id}")
-        q1_text = st.text_input("첫 번째 질문", value=selected_problem.get("q1", "1. 지문의 핵심 키워드"), key=f"q1_{selected_id}")
-        q2_text = st.text_input("두 번째 질문", value=selected_problem.get("q2", "2. 주제 한 문장 요약"), key=f"q2_{selected_id}")
-        q3_text = st.text_input("세 번째 질문", value=selected_problem.get("q3", "3. 글의 흐름 세 문장 요약"), key=f"q3_{selected_id}")
-        new_passage = st.text_area("영어 지문", height=150, value=selected_problem.get("passage", ""), key=f"pass_{selected_id}")
-        new_key_points = st.text_area("추가 지시사항 / 채점 주의사항 (선택사항)", height=80, value=selected_problem.get("key_points", ""), key=f"key_{selected_id}")
-
-        if st.button("💾 지문 변경사항 저장", type="primary"):
-            st.session_state["PROBLEM_BANK"][selected_id]["title"] = new_title
-            st.session_state["PROBLEM_BANK"][selected_id]["q1"] = q1_text
-            st.session_state["PROBLEM_BANK"][selected_id]["q2"] = q2_text
-            st.session_state["PROBLEM_BANK"][selected_id]["q3"] = q3_text
-            st.session_state["PROBLEM_BANK"][selected_id]["passage"] = new_passage
-            st.session_state["PROBLEM_BANK"][selected_id]["key_points"] = new_key_points
-            
-            success, msg = save_problem_bank(st.session_state["PROBLEM_BANK"])
-            if success:
-                st.success(msg)
+        # 1. 학생 답안 조회 (수업 공유용 - 기본 열림)
+        with st.expander("📊 실시간 학생 답안 조회 (최근 60분)", expanded=True):
+            submissions_data = load_submissions()
+            if not submissions_data:
+                st.info("최근 60분 이내에 제출된 학생 답안이 없습니다.")
             else:
-                st.error(msg)
-            st.rerun()
-
-        st.markdown("---")
-        st.header("📊 실시간 학생 답안 조회 (최근 60분)")
-        submissions_data = load_submissions()
-        if not submissions_data:
-            st.info("최근 60분 이내에 제출된 학생 답안이 없습니다.")
-        else:
-            sorted_subs = sorted(submissions_data, key=lambda x: x.get("timestamp", ""), reverse=True)
-            sub_labels = [f"{sub['student']} - {sub['problem_title']} ({sub['timestamp'].split()[1]})" for sub in sorted_subs]
-            
-            selected_sub_label = st.selectbox("📋 제출 내역 선택", sub_labels)
-            selected_sub_idx = sub_labels.index(selected_sub_label)
-            sub_info = sorted_subs[selected_sub_idx]
-            
-            st.markdown(f"**👤 학생**: {sub_info['student']}")
-            st.markdown(f"**📖 지문**: {sub_info['problem_title']}")
-            st.markdown(f"**⏰ 제출 시간**: {sub_info['timestamp']}")
-            
-            with st.expander("📝 학생 작성 답안 보기", expanded=True):
-                st.write(f"**1. 키워드**: {sub_info['ans1']}")
-                st.write(f"**2. 주제 요약**: {sub_info['ans2']}")
-                st.write(f"**3. 흐름 요약**: {sub_info['ans3']}")
+                sorted_subs = sorted(submissions_data, key=lambda x: x.get("timestamp", ""), reverse=True)
+                sub_labels = [f"{sub['student']} - {sub['problem_title']} ({sub['timestamp'].split()[1]})" for sub in sorted_subs]
                 
-            with st.expander("🤖 전달된 AI 피드백 보기", expanded=False):
-                st.write(sub_info['feedback'])
+                selected_sub_label = st.selectbox("📋 제출 내역 선택", sub_labels)
+                selected_sub_idx = sub_labels.index(selected_sub_label)
+                sub_info = sorted_subs[selected_sub_idx]
+                
+                st.markdown(f"**👤 학생**: {sub_info['student']}")
+                st.markdown(f"**📖 지문**: {sub_info['problem_title']}")
+                st.markdown(f"**⏰ 제출 시간**: {sub_info['timestamp']}")
+                
+                with st.expander("📝 학생 작성 답안 보기", expanded=True):
+                    st.write(f"**1. 키워드**: {sub_info['ans1']}")
+                    st.write(f"**2. 주제 요약**: {sub_info['ans2']}")
+                    st.write(f"**3. 흐름 요약**: {sub_info['ans3']}")
+                    
+                with st.expander("🤖 전달된 AI 피드백 보기", expanded=False):
+                    st.write(sub_info['feedback'])
+
+        # 2. 지문 및 문제 수정 (기본 닫힘 - 수업 시 숨김 가능)
+        with st.expander(f"⚙️ {selected_id}번 지문 및 문제 수정", expanded=False):
+            new_title = st.text_input("문제 이름", value=selected_problem.get("title", ""), key=f"title_{selected_id}")
+            q1_text = st.text_input("첫 번째 질문", value=selected_problem.get("q1", "1. 지문의 핵심 키워드"), key=f"q1_{selected_id}")
+            q2_text = st.text_input("두 번째 질문", value=selected_problem.get("q2", "2. 주제 한 문장 요약"), key=f"q2_{selected_id}")
+            q3_text = st.text_input("세 번째 질문", value=selected_problem.get("q3", "3. 글의 흐름 세 문장 요약"), key=f"q3_{selected_id}")
+            new_passage = st.text_area("영어 지문", height=150, value=selected_problem.get("passage", ""), key=f"pass_{selected_id}")
+            new_key_points = st.text_area("추가 지시사항 / 채점 주의사항 (선택사항)", height=80, value=selected_problem.get("key_points", ""), key=f"key_{selected_id}")
+
+            if st.button("💾 지문 변경사항 저장", type="primary"):
+                st.session_state["PROBLEM_BANK"][selected_id]["title"] = new_title
+                st.session_state["PROBLEM_BANK"][selected_id]["q1"] = q1_text
+                st.session_state["PROBLEM_BANK"][selected_id]["q2"] = q2_text
+                st.session_state["PROBLEM_BANK"][selected_id]["q3"] = q3_text
+                st.session_state["PROBLEM_BANK"][selected_id]["passage"] = new_passage
+                st.session_state["PROBLEM_BANK"][selected_id]["key_points"] = new_key_points
+                
+                success, msg = save_problem_bank(st.session_state["PROBLEM_BANK"])
+                if success:
+                    st.success(msg)
+                else:
+                    st.error(msg)
+                st.rerun()
+
+        # 3. 수업 전 단어 테스트 관리 (기본 닫힘)
+        with st.expander("🔤 수업 전 단어 테스트 관리", expanded=False):
+            current_vocab_str = "\n".join([f"{item['word']} : {item['meaning']}" for item in st.session_state["VOCAB_LIST"]])
+            new_vocab_raw = st.text_area("단어 : 뜻 (한 줄에 하나씩 작성)", value=current_vocab_str, height=180, help="예시:\ncrucial : 중요한\nperspective : 관점")
+            
+            if st.button("💾 단어 목록 저장 및 반영", type="primary"):
+                new_vocab_list = []
+                for line in new_vocab_raw.strip().split("\n"):
+                    if ":" in line:
+                        w, m = line.split(":", 1)
+                        new_vocab_list.append({"word": w.strip(), "meaning": m.strip()})
+                    elif line.strip():
+                        new_vocab_list.append({"word": line.strip(), "meaning": ""})
+                
+                st.session_state["VOCAB_LIST"] = new_vocab_list
+                save_vocab(new_vocab_list)
+                st.success("단어 테스트 목록이 수정 및 저장되었습니다!")
+                st.rerun()
 
 # --- 학생용: 1. 수업 전 단어 테스트 영역 ---
 st.markdown("---")
