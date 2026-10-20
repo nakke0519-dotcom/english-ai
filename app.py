@@ -50,12 +50,16 @@ def get_default_bank():
         }
     return default_bank
 
-def get_default_vocab():
-    return [
-        {"word": "crucial", "meaning": "중요한, 결정적인"},
-        {"word": "perspective", "meaning": "관점, 시각"},
-        {"word": "emphasize", "meaning": "강조하다"}
-    ]
+def get_default_vocab_dict():
+    # 1~35번 지문별 기본 단어 데이터
+    vocab_dict = {}
+    for i in range(1, 36):
+        vocab_dict[i] = [
+            {"word": "crucial", "meaning": "중요한, 결정적인"},
+            {"word": "perspective", "meaning": "관점, 시각"},
+            {"word": "emphasize", "meaning": "강조하다"}
+        ]
+    return vocab_dict
 
 # --- 문제 및 단어 데이터 불러오기/저장 ---
 def load_problem_bank():
@@ -83,17 +87,25 @@ def load_problem_bank():
             pass
     return default_bank
 
-def load_vocab():
+def load_vocab_dict():
+    default_vocab = get_default_vocab_dict()
     if os.path.exists(VOCAB_FILE):
         try:
             with open(VOCAB_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
+                data = json.load(f)
+                parsed_vocab = {}
+                for k, v in data.items():
+                    parsed_vocab[int(k)] = v
+                for i in range(1, 36):
+                    if i not in parsed_vocab:
+                        parsed_vocab[i] = default_vocab[i]
+                return parsed_vocab
         except Exception:
             pass
-    return get_default_vocab()
+    return default_vocab
 
-def save_vocab(vocab_list):
-    json_str = json.dumps(vocab_list, ensure_ascii=False, indent=2)
+def save_vocab_dict(vocab_dict):
+    json_str = json.dumps(vocab_dict, ensure_ascii=False, indent=2)
     with open(VOCAB_FILE, "w", encoding="utf-8") as f:
         f.write(json_str)
 
@@ -177,8 +189,8 @@ def save_submission(record):
 if "PROBLEM_BANK" not in st.session_state or not st.session_state["PROBLEM_BANK"]:
     st.session_state["PROBLEM_BANK"] = load_problem_bank()
 
-if "VOCAB_LIST" not in st.session_state:
-    st.session_state["VOCAB_LIST"] = load_vocab()
+if "VOCAB_DICT" not in st.session_state or not st.session_state["VOCAB_DICT"]:
+    st.session_state["VOCAB_DICT"] = load_vocab_dict()
 
 if "latest_feedback" not in st.session_state:
     st.session_state["latest_feedback"] = None
@@ -219,6 +231,7 @@ with col_select:
 
 selected_id = options_map[selected_option_label]
 selected_problem = st.session_state["PROBLEM_BANK"][selected_id]
+current_vocab_list = st.session_state["VOCAB_DICT"].get(selected_id, [])
 
 # --- 교사 전용 관리 제어판 (접이식 메뉴 적용) ---
 if is_teacher:
@@ -274,12 +287,12 @@ if is_teacher:
                     st.error(msg)
                 st.rerun()
 
-        # 3. 수업 전 단어 테스트 관리 (기본 닫힘)
-        with st.expander("🔤 수업 전 단어 테스트 관리", expanded=False):
-            current_vocab_str = "\n".join([f"{item['word']} : {item['meaning']}" for item in st.session_state["VOCAB_LIST"]])
-            new_vocab_raw = st.text_area("단어 : 뜻 (한 줄에 하나씩 작성)", value=current_vocab_str, height=180, help="예시:\ncrucial : 중요한\nperspective : 관점")
+        # 3. 지문별 수업 전 단어 테스트 관리 (기본 닫힘)
+        with st.expander(f"🔤 [{selected_id}번 지문] 단어 테스트 관리", expanded=False):
+            current_vocab_str = "\n".join([f"{item['word']} : {item['meaning']}" for item in current_vocab_list])
+            new_vocab_raw = st.text_area("단어 : 뜻 (한 줄에 하나씩 작성)", value=current_vocab_str, height=180, key=f"v_edit_{selected_id}", help="예시:\ncrucial : 중요한\nperspective : 관점")
             
-            if st.button("💾 단어 목록 저장 및 반영", type="primary"):
+            if st.button(f"💾 {selected_id}번 지문 단어 목록 저장", type="primary"):
                 new_vocab_list = []
                 for line in new_vocab_raw.strip().split("\n"):
                     if ":" in line:
@@ -288,34 +301,37 @@ if is_teacher:
                     elif line.strip():
                         new_vocab_list.append({"word": line.strip(), "meaning": ""})
                 
-                st.session_state["VOCAB_LIST"] = new_vocab_list
-                save_vocab(new_vocab_list)
-                st.success("단어 테스트 목록이 수정 및 저장되었습니다!")
+                st.session_state["VOCAB_DICT"][selected_id] = new_vocab_list
+                save_vocab_dict(st.session_state["VOCAB_DICT"])
+                st.success(f"{selected_id}번 지문의 단어 테스트 목록이 저장되었습니다!")
                 st.rerun()
 
-# --- 학생용: 1. 수업 전 단어 테스트 영역 ---
+# --- 학생용: 1. 선택된 지문 전용 단어 테스트 영역 ---
 st.markdown("---")
-with st.expander("📝 [수업 전 3분] 오늘의 핵심 영단어 테스트", expanded=True):
-    st.caption("지문을 읽기 전에 아래 영단어/표현의 뜻을 한글로 작성해 보세요!")
-    
-    vocab_inputs = {}
-    cols = st.columns(min(len(st.session_state["VOCAB_LIST"]), 3) or 1)
-    
-    for idx, item in enumerate(st.session_state["VOCAB_LIST"]):
-        col_target = cols[idx % len(cols)]
-        with col_target:
-            vocab_inputs[item['word']] = st.text_input(f"📌 {item['word']}", key=f"vocab_{idx}", placeholder="뜻을 입력하세요")
-            
-    if st.button("✅ 단어 답안 정답 확인"):
-        st.markdown("##### 🎯 단어 테스트 결과 및 정답")
-        for idx, item in enumerate(st.session_state["VOCAB_LIST"]):
-            user_m = vocab_inputs.get(item['word'], '').strip()
-            correct_m = item.get('meaning', '').strip()
-            
-            if user_m:
-                st.write(f"- **{item['word']}**: 작성한 뜻 (`{user_m}`) ➔ 정답/모범뜻: **{correct_m}**")
-            else:
-                st.write(f"- **{item['word']}**: ⚠️ 미작성 ➔ 정답/모범뜻: **{correct_m}**")
+with st.expander(f"📝 [수업 전 3분] {selected_id}번 지문 핵심 영단어 테스트", expanded=True):
+    if not current_vocab_list:
+        st.info("등록된 단어가 없습니다.")
+    else:
+        st.caption("지문을 읽기 전에 아래 영단어/표현의 뜻을 한글로 작성해 보세요!")
+        
+        vocab_inputs = {}
+        cols = st.columns(min(len(current_vocab_list), 3) or 1)
+        
+        for idx, item in enumerate(current_vocab_list):
+            col_target = cols[idx % len(cols)]
+            with col_target:
+                vocab_inputs[item['word']] = st.text_input(f"📌 {item['word']}", key=f"vocab_{selected_id}_{idx}", placeholder="뜻을 입력하세요")
+                
+        if st.button("✅ 단어 답안 정답 확인"):
+            st.markdown("##### 🎯 단어 테스트 결과 및 정답")
+            for idx, item in enumerate(current_vocab_list):
+                user_m = vocab_inputs.get(item['word'], '').strip()
+                correct_m = item.get('meaning', '').strip()
+                
+                if user_m:
+                    st.write(f"- **{item['word']}**: 작성한 뜻 (`{user_m}`) ➔ 정답/모범뜻: **{correct_m}**")
+                else:
+                    st.write(f"- **{item['word']}**: ⚠️ 미작성 ➔ 정답/모범뜻: **{correct_m}**")
 
 # --- 학생용: 2. 영어 지문 및 문제 영역 ---
 st.markdown("---")
