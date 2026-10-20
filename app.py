@@ -33,9 +33,10 @@ if not api_key:
 genai.configure(api_key=api_key)
 
 DATA_FILE = "problem_bank.json"
+VOCAB_FILE = "vocabulary.json"
 SUBMISSION_FILE = "submissions.json"
 
-# --- 기본 문제 데이터 생성 (35개 풀세트) ---
+# --- 기본 데이터 생성 ---
 def get_default_bank():
     default_bank = {}
     for i in range(1, 36):
@@ -49,7 +50,14 @@ def get_default_bank():
         }
     return default_bank
 
-# --- 문제 데이터 안전하게 불러오기 ---
+def get_default_vocab():
+    return [
+        {"word": "crucial", "meaning": "중요한, 결정적인"},
+        {"word": "perspective", "meaning": "관점, 시각"},
+        {"word": "emphasize", "meaning": "강조하다"}
+    ]
+
+# --- 문제 및 단어 데이터 불러오기/저장 ---
 def load_problem_bank():
     default_bank = get_default_bank()
     if os.path.exists(DATA_FILE):
@@ -71,47 +79,72 @@ def load_problem_bank():
                     if i not in parsed_data:
                         parsed_data[i] = default_bank[i]
                 return parsed_data
-        except Exception as e:
-            st.warning(f"problem_bank.json 파일 읽기 오류가 발생하여 기본 데이터를 불러옵니다: {e}")
+        except Exception:
             pass
     return default_bank
 
-# --- GitHub에 problem_bank.json 커밋 및 저장 ---
+def load_vocab():
+    if os.path.exists(VOCAB_FILE):
+        try:
+            with open(VOCAB_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return get_default_vocab()
+
+def save_vocab(vocab_list):
+    json_str = json.dumps(vocab_list, ensure_ascii=False, indent=2)
+    with open(VOCAB_FILE, "w", encoding="utf-8") as f:
+        f.write(json_str)
+
+    if HAS_GITHUB and github_token and github_repo_name:
+        try:
+            g = Github(github_token)
+            repo = g.get_repo(github_repo_name.strip())
+            try:
+                contents = repo.get_contents(VOCAB_FILE)
+                repo.update_file(
+                    path=VOCAB_FILE,
+                    message=f"Update vocabulary.json via Web Editor ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
+                    content=json_str,
+                    sha=contents.sha
+                )
+            except Exception:
+                repo.create_file(
+                    path=VOCAB_FILE,
+                    message=f"Create vocabulary.json via Web Editor ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
+                    content=json_str
+                )
+        except Exception:
+            pass
+
 def save_problem_bank(data):
     json_str = json.dumps(data, ensure_ascii=False, indent=2)
-    
-    # 1. 로컬/서버 파일 저장
     with open(DATA_FILE, "w", encoding="utf-8") as f:
         f.write(json_str)
 
-    # 2. GitHub 저장소에 자동 커밋 및 연동
-    if not github_token or not github_repo_name:
-        return False, "⚠️ Streamlit Secrets에 GITHUB_TOKEN 또는 GITHUB_REPO가 설정되지 않았습니다."
-
-    if not HAS_GITHUB:
-        return False, "⚠️ PyGithub 라이브러리가 설치되지 않았습니다. (requirements.txt 확인 필요)"
-
-    try:
-        g = Github(github_token)
-        repo = g.get_repo(github_repo_name.strip())
-        
+    if HAS_GITHUB and github_token and github_repo_name:
         try:
-            contents = repo.get_contents(DATA_FILE)
-            repo.update_file(
-                path=DATA_FILE,
-                message=f"Update problem_bank.json via Web Editor ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
-                content=json_str,
-                sha=contents.sha
-            )
-        except Exception:
-            repo.create_file(
-                path=DATA_FILE,
-                message=f"Create problem_bank.json via Web Editor ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
-                content=json_str
-            )
-        return True, "✅ GitHub 저장소에 problem_bank.json 자동 커밋이 완료되었습니다!"
-    except Exception as e:
-        return False, f"❌ GitHub 연동 오류 발생: {e}"
+            g = Github(github_token)
+            repo = g.get_repo(github_repo_name.strip())
+            try:
+                contents = repo.get_contents(DATA_FILE)
+                repo.update_file(
+                    path=DATA_FILE,
+                    message=f"Update problem_bank.json via Web Editor ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
+                    content=json_str,
+                    sha=contents.sha
+                )
+            except Exception:
+                repo.create_file(
+                    path=DATA_FILE,
+                    message=f"Create problem_bank.json via Web Editor ({datetime.now().strftime('%Y-%m-%d %H:%M')})",
+                    content=json_str
+                )
+            return True, "✅ GitHub 저장소에 자동 저장 커밋이 완료되었습니다!"
+        except Exception as e:
+            return False, f"❌ GitHub 저장 오류: {e}"
+    return True, "로컬 세션에 저장되었습니다."
 
 # --- 학생 제출 데이터 불러오기/저장 (60분 자동 삭제) ---
 def load_submissions():
@@ -119,18 +152,15 @@ def load_submissions():
         try:
             with open(SUBMISSION_FILE, "r", encoding="utf-8") as f:
                 submissions = json.load(f)
-                
             now = datetime.now()
             valid_submissions = []
             for sub in submissions:
                 sub_time = datetime.strptime(sub["timestamp"], "%Y-%m-%d %H:%M:%S")
                 if now - sub_time <= timedelta(minutes=60):
                     valid_submissions.append(sub)
-                    
             if len(valid_submissions) != len(submissions):
                 with open(SUBMISSION_FILE, "w", encoding="utf-8") as f:
                     json.dump(valid_submissions, f, ensure_ascii=False, indent=2)
-                    
             return valid_submissions
         except Exception:
             pass
@@ -143,9 +173,12 @@ def save_submission(record):
     with open(SUBMISSION_FILE, "w", encoding="utf-8") as f:
         f.write(json_str)
 
-# 세션 데이터 및 피드백 상태 초기화
+# 세션 데이터 초기화
 if "PROBLEM_BANK" not in st.session_state or not st.session_state["PROBLEM_BANK"]:
     st.session_state["PROBLEM_BANK"] = load_problem_bank()
+
+if "VOCAB_LIST" not in st.session_state:
+    st.session_state["VOCAB_LIST"] = load_vocab()
 
 if "latest_feedback" not in st.session_state:
     st.session_state["latest_feedback"] = None
@@ -166,9 +199,8 @@ with st.sidebar:
 
 # --- 메인 화면 ---
 st.title("📖 ENGLISH READING AI ASSISTANT")
-st.write("학번과 이름을 입력하고 문제를 선택하여 답변을 작성하세요.")
+st.write("학번과 이름을 입력하고 단어 테스트 및 지문 문제 풀이를 진행하세요.")
 
-# --- 학생 이름 입력 및 지문 선택 ---
 col_student, col_select = st.columns([1, 2])
 with col_student:
     student_name = st.text_input("👤 학생 이름 (예: 10101 홍길동)", placeholder="학번과 이름을 입력하세요")
@@ -181,27 +213,48 @@ for i in range(1, 36):
 
 with col_select:
     selected_option_label = st.selectbox(
-        "📌 풀고 싶은 문제를 선택하세요:",
+        "📌 풀고 싶은 지문을 선택하세요:",
         list(options_map.keys())
     )
 
 selected_id = options_map[selected_option_label]
 selected_problem = st.session_state["PROBLEM_BANK"][selected_id]
 
-# --- 교사 전용 수정, 백업 및 실시간 피드백 조회 ---
+# --- 교사 전용 관리 제어판 (지문 및 단어 수정) ---
 if is_teacher:
     with st.sidebar:
         st.markdown("---")
-        st.header(f"⚙️ {selected_id}번 문제 수정")
+        st.header("🔤 수업 전 단어 테스트 관리")
+        
+        # 기존 단어를 텍스트 형식으로 파싱
+        current_vocab_str = "\n".join([f"{item['word']} : {item['meaning']}" for item in st.session_state["VOCAB_LIST"]])
+        new_vocab_raw = st.text_area("단어 : 뜻 (한 줄에 하나씩 작성)", value=current_vocab_str, height=180, help="예시:\ncrucial : 중요한\nperspective : 관점")
+        
+        if st.button("💾 단어 목록 저장 및 반영", type="primary"):
+            new_vocab_list = []
+            for line in new_vocab_raw.strip().split("\n"):
+                if ":" in line:
+                    w, m = line.split(":", 1)
+                    new_vocab_list.append({"word": w.strip(), "meaning": m.strip()})
+                elif line.strip():
+                    new_vocab_list.append({"word": line.strip(), "meaning": ""})
+            
+            st.session_state["VOCAB_LIST"] = new_vocab_list
+            save_vocab(new_vocab_list)
+            st.success("단어 테스트 목록이 수정 및 저장되었습니다!")
+            st.rerun()
+
+        st.markdown("---")
+        st.header(f"⚙️ {selected_id}번 지문 수정")
         
         new_title = st.text_input("문제 이름", value=selected_problem.get("title", ""), key=f"title_{selected_id}")
         q1_text = st.text_input("첫 번째 질문", value=selected_problem.get("q1", "1. 지문의 핵심 키워드"), key=f"q1_{selected_id}")
         q2_text = st.text_input("두 번째 질문", value=selected_problem.get("q2", "2. 주제 한 문장 요약"), key=f"q2_{selected_id}")
         q3_text = st.text_input("세 번째 질문", value=selected_problem.get("q3", "3. 글의 흐름 세 문장 요약"), key=f"q3_{selected_id}")
         new_passage = st.text_area("영어 지문", height=150, value=selected_problem.get("passage", ""), key=f"pass_{selected_id}")
-        new_key_points = st.text_area("추가 지시사항 / 채점 주의사항 (선택사항)", height=80, value=selected_problem.get("key_points", ""), key=f"key_{selected_id}", placeholder="특별히 강조할 키워드나 평가 방향이 있는 경우만 작성하세요. 비워두면 AI가 직접 지문을 분석합니다.")
+        new_key_points = st.text_area("추가 지시사항 / 채점 주의사항 (선택사항)", height=80, value=selected_problem.get("key_points", ""), key=f"key_{selected_id}")
 
-        if st.button("💾 변경사항 적용 및 GitHub 영구 저장", type="primary"):
+        if st.button("💾 지문 변경사항 저장", type="primary"):
             st.session_state["PROBLEM_BANK"][selected_id]["title"] = new_title
             st.session_state["PROBLEM_BANK"][selected_id]["q1"] = q1_text
             st.session_state["PROBLEM_BANK"][selected_id]["q2"] = q2_text
@@ -219,7 +272,6 @@ if is_teacher:
         st.markdown("---")
         st.header("📊 실시간 학생 답안 조회 (최근 60분)")
         submissions_data = load_submissions()
-        
         if not submissions_data:
             st.info("최근 60분 이내에 제출된 학생 답안이 없습니다.")
         else:
@@ -242,17 +294,31 @@ if is_teacher:
             with st.expander("🤖 전달된 AI 피드백 보기", expanded=False):
                 st.write(sub_info['feedback'])
 
-        st.markdown("---")
-        st.header("📥 백업 파일 다운로드")
-        bank_json = json.dumps(st.session_state["PROBLEM_BANK"], ensure_ascii=False, indent=2)
-        st.download_button(
-            label="problem_bank.json 다운로드",
-            data=bank_json,
-            file_name="problem_bank.json",
-            mime="application/json"
-        )
+# --- 학생용: 1. 수업 전 단어 테스트 영역 ---
+st.markdown("---")
+with st.expander("📝 [수업 전 3분] 오늘의 핵심 영단어 테스트", expanded=True):
+    st.caption("지문을 읽기 전에 아래 영단어/표현의 뜻을 한글로 작성해 보세요!")
+    
+    vocab_inputs = {}
+    cols = st.columns(min(len(st.session_state["VOCAB_LIST"]), 3) or 1)
+    
+    for idx, item in enumerate(st.session_state["VOCAB_LIST"]):
+        col_target = cols[idx % len(cols)]
+        with col_target:
+            vocab_inputs[item['word']] = st.text_input(f"📌 {item['word']}", key=f"vocab_{idx}", placeholder="뜻을 입력하세요")
+            
+    if st.button("✅ 단어 답안 정답 확인"):
+        st.markdown("##### 🎯 단어 테스트 결과 및 정답")
+        for idx, item in enumerate(st.session_state["VOCAB_LIST"]):
+            user_m = vocab_inputs.get(item['word'], '').strip()
+            correct_m = item.get('meaning', '').strip()
+            
+            if user_m:
+                st.write(f"- **{item['word']}**: 작성한 뜻 (`{user_m}`) ➔ 정답/모범뜻: **{correct_m}**")
+            else:
+                st.write(f"- **{item['word']}**: ⚠️ 미작성 ➔ 정답/모범뜻: **{correct_m}**")
 
-# --- 학생 문제 풀기 영역 ---
+# --- 학생용: 2. 영어 지문 및 문제 영역 ---
 st.markdown("---")
 st.subheader(f"📝 {selected_problem['title']}")
 st.info(selected_problem['passage'])
