@@ -340,21 +340,23 @@ st.markdown("---")
 st.subheader(f"📝 {selected_problem['title']}")
 st.info(selected_problem['passage'])
 
-# 💡 AI 도우미 콜업 버튼
+# 💡 간결한 AI 도우미 콜업 버튼 및 프롬프트
 col_hint_btn, _ = st.columns([1, 2])
 with col_hint_btn:
     if st.button("💡 너무 어려워요! AI 도우미 콜업", key=f"hint_btn_{selected_id}"):
-        with st.spinner("AI 도우미가 지문의 힌트와 어려운 표현을 정리 중입니다..."):
+        with st.spinner("AI 도우미 분석 중..."):
             hint_prompt = (
-                "당신은 친절한 고등학교 영어 교사입니다.\n"
-                "학생이 아래 지문을 해석하거나 독해하기 어려워하고 있습니다.\n"
-                "학생의 독해 공부를 돕기 위해 다음 두 가지를 친절하고 읽기 쉽게 작성해 주세요.\n\n"
+                "당신은 고등학교 영어 교사입니다.\n"
+                "아래 제시된 지문을 읽고, 불필요한 인사말이나 긴 설명 없이 오직 아래 지정된 서식대로만 힌트를 작성해 주세요.\n\n"
                 f"[영어 지문]\n{selected_problem['passage']}\n\n"
-                "[요청사항]\n"
-                "1. **💡 이 글은 이런 내용이에요 (소재/주제 방향 힌트)**:\n"
-                "   - 직접적인 정답 전체를 말해주지 말고, '이 글은 ~에 대한 내용이야'처럼 글의 배경이나 중심 소재를 한두 문장으로 쉽게 설명해 주세요.\n"
-                "2. **🔤 지문 속 꼭 알아야 할 어려운 단어 & 표현 Top 4**: \n"
-                "   - 지문에 등장하는 구문 중 학생들이 헷갈리기 쉬운 단어/숙어 표현 3~4개를 골라 '영어 단어 (뜻)' 형태로 알려주세요."
+                "[출력 서식 규칙 (반드시 이 규칙대로만 작성하세요)]\n"
+                "첫 줄: AI 도우미 등장!\n\n"
+                "📌 **어려운 단어 / 숙어 표현**:\n"
+                "- 단어1 : 뜻\n"
+                "- 단어2 : 뜻\n"
+                "- 단어3 : 뜻\n\n"
+                "💡 **주제 힌트**:\n"
+                "- (지문의 전체 정답을 다 주지 말고, '이 글은 ~가 ~를 했다는 내용이야!' 형태로 부분적인 핵심 소재 힌트를 한 문장으로 작성)"
             )
             try:
                 model = genai.GenerativeModel('gemini-3.1-flash-lite')
@@ -365,7 +367,7 @@ with col_hint_btn:
 
 # 💡 생성된 힌트 출력 상자
 if selected_id in st.session_state["ai_hints"]:
-    st.warning(f"### 🤖 AI 도우미의 힌트 상자\n{st.session_state['ai_hints'][selected_id]}")
+    st.info(st.session_state['ai_hints'][selected_id])
 
 col1, col2 = st.columns(2)
 with col1:
