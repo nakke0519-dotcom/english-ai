@@ -11,13 +11,6 @@ try:
 except ImportError:
     HAS_GITHUB = False
 
-# 자동 새로고침 라이브러리 불러오기
-try:
-    from streamlit_autorefresh import st_autorefresh
-    HAS_AUTOREFRESH = True
-except ImportError:
-    HAS_AUTOREFRESH = False
-
 st.set_page_config(page_title="ENGLISH READING AI ASSISTANT", page_icon="📖", layout="wide")
 
 # --- API 키 및 비밀번호 확인 ---
@@ -206,8 +199,6 @@ with st.sidebar:
     
     if is_teacher:
         st.success("🔓 교사 인증 완료")
-        if HAS_AUTOREFRESH:
-            st_autorefresh(interval=10000, key="teacher_refresh")
     else:
         st.caption("비밀번호를 입력하면 교사 전용 관리 화면이 열립니다.")
 
@@ -235,13 +226,16 @@ selected_id = options_map[selected_option_label]
 selected_problem = st.session_state["PROBLEM_BANK"][selected_id]
 current_vocab_list = st.session_state["VOCAB_DICT"].get(selected_id, [])
 
-# --- 교사 전용 관리 제어판 (접이식 메뉴) ---
+# --- 교사 전용 관리 제어판 (수동 새로고침 버튼 반영) ---
 if is_teacher:
     with st.sidebar:
         st.markdown("---")
         
-        # 1. 학생 답안 조회 (수업 공유용)
+        # 1. 학생 답안 조회 (수동 새로고침)
         with st.expander("📊 실시간 학생 답안 조회 (최근 60분)", expanded=True):
+            if st.button("🔄 실시간 제출 내역 새로고침", use_container_width=True):
+                st.rerun()
+                
             submissions_data = load_submissions()
             if not submissions_data:
                 st.info("최근 60분 이내에 제출된 학생 답안이 없습니다.")
