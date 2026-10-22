@@ -318,7 +318,7 @@ selected_id = options_map[selected_option_label]
 selected_problem = st.session_state["PROBLEM_BANK"][selected_id]
 current_vocab_list = st.session_state["VOCAB_DICT"].get(selected_id, [])
 
-# --- 콜백 함수 정의 (위젯 인스턴스화 이전 세션 업데이트용) ---
+# --- 콜백 함수 정의 ---
 def clean_passage_callback(pass_key, sel_id):
     current_txt = st.session_state.get(pass_key, "")
     cleaned_p = clean_passage_text(current_txt)
@@ -427,7 +427,7 @@ if is_teacher:
                 with st.expander("🤖 전달된 AI 피드백 보기", expanded=False):
                     st.write(sub_info['feedback'])
 
-        # 2. 지문 및 문제 수정 (on_click 콜백 적용)
+        # 2. 지문 및 문제 수정
         with st.expander(f"⚙️ {selected_id}번 지문 및 문제 수정", expanded=False):
             new_title = st.text_input("문제 이름", value=selected_problem.get("title", ""), key=f"title_{selected_id}")
             q1_text = st.text_input("첫 번째 질문", value=selected_problem.get("q1", "1. 지문의 핵심 키워드"), key=f"q1_{selected_id}")
@@ -532,7 +532,7 @@ st.subheader(f"📝 {selected_problem['title']}")
 html_passage = render_passage_with_tooltips(selected_problem['passage'])
 st.markdown(f'<div class="passage-box">{html_passage}</div>', unsafe_allow_html=True)
 
-# 💡 간결한 AI 도우미 콜업 버튼
+# 💡 수정된 AI 도우미 콜업 버튼 및 프롬프트
 col_hint_btn, _ = st.columns([1, 2])
 with col_hint_btn:
     if st.button("💡 너무 어려워요! AI 도우미 콜업", key=f"hint_btn_{selected_id}"):
@@ -540,16 +540,15 @@ with col_hint_btn:
             clean_prompt_passage = re.sub(r'\[\[(.*?)\:(.*?)\]\]', r'\1', selected_problem['passage'])
             hint_prompt = (
                 "당신은 고등학교 영어 교사입니다.\n"
-                "아래 제시된 지문을 읽고, 불필요한 인사말이나 긴 설명 없이 오직 아래 지정된 서식대로만 힌트를 작성해 주세요.\n\n"
+                "학생이 지문을 읽고 스스로 생각할 수 있도록 돕는 힌트를 작성해 주세요.\n"
+                "불필요한 인사말이나 길고 장황한 설명 없이, 오직 아래 지정된 서식대로만 간결하게 작성하세요.\n\n"
                 f"[영어 지문]\n{clean_prompt_passage}\n\n"
                 "[출력 서식 규칙 (반드시 이 규칙대로만 작성하세요)]\n"
                 "첫 줄: AI 도우미 등장!\n\n"
-                "📌 **어려운 단어 / 숙어 표현**:\n"
-                "- 단어1 : 뜻\n"
-                "- 단어2 : 뜻\n"
-                "- 단어3 : 뜻\n\n"
-                "💡 **주제 힌트**:\n"
-                "- (지문의 전체 정답을 다 주지 말고, '이 글은 ~가 ~를 했다는 내용이야!' 형태로 부분적인 핵심 소재 힌트를 한 문장으로 작성)"
+                "🔍 **주제 추론 단서 문장**:\n"
+                "- (지문의 주제를 직접 알려주지 말고, 주제를 추론할 수 있는 힌트가 되는 핵심 원문 한 문장을 영어로 인용하고 간단한 힌트 한 줄 덧붙이기)\n\n"
+                "📌 **주의 깊게 봐야 할 문장 파트**:\n"
+                "- (글의 논지 전환, 대조, 또는 핵심 인과관계가 드러나는 문장 영역이나 구문을 짚어주고 어떤 점에 집중해서 읽어야 할지 설명)"
             )
             try:
                 model = genai.GenerativeModel('gemini-3.1-flash-lite')
