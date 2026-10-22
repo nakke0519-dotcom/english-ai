@@ -13,6 +13,23 @@ except ImportError:
 
 st.set_page_config(page_title="ENGLISH READING AI ASSISTANT", page_icon="📖", layout="wide")
 
+# --- Custom CSS: 지문 상자 줄 간격 및 글자 크기 대폭 확대 (판서용) ---
+st.markdown("""
+    <style>
+    .passage-box {
+        background-color: #f0f2f6;
+        border-radius: 10px;
+        padding: 25px 30px;
+        font-size: 18px;
+        line-height: 2.3;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        color: #1f2937;
+        margin-bottom: 20px;
+        word-break: break-word;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 # --- API 키 및 비밀번호 확인 ---
 api_key = st.secrets.get("GEMINI_API_KEY")
 teacher_password = st.secrets.get("TEACHER_PASSWORD", "rnswltk1!")
@@ -226,7 +243,7 @@ selected_id = options_map[selected_option_label]
 selected_problem = st.session_state["PROBLEM_BANK"][selected_id]
 current_vocab_list = st.session_state["VOCAB_DICT"].get(selected_id, [])
 
-# --- 교사 전용 관리 제어판 (수동 새로고침 버튼 반영) ---
+# --- 교사 전용 관리 제어판 ---
 if is_teacher:
     with st.sidebar:
         st.markdown("---")
@@ -329,12 +346,15 @@ with st.expander(f"📝 [수업 전 3분] {selected_id}번 지문 핵심 영단�
                 else:
                     st.write(f"- **{item['word']}**: ⚠️ 미작성 ➔ 정답/모범뜻: **{correct_m}**")
 
-# --- 학생용: 2. 영어 지문 및 문제 영역 ---
+# --- 학생용: 2. 영어 지문 및 문제 영역 (넓은 판서용 지문 상자) ---
 st.markdown("---")
 st.subheader(f"📝 {selected_problem['title']}")
-st.info(selected_problem['passage'])
 
-# 💡 간결한 AI 도우미 콜업 버튼 및 프롬프트
+# 넓은 줄 간격을 적용한 custom HTML 지문 상자
+passage_text = selected_problem['passage'].replace('\n', '<br>')
+st.markdown(f'<div class="passage-box">{passage_text}</div>', unsafe_allow_html=True)
+
+# 💡 AI 도우미 콜업 버튼
 col_hint_btn, _ = st.columns([1, 2])
 with col_hint_btn:
     if st.button("💡 너무 어려워요! AI 도우미 콜업", key=f"hint_btn_{selected_id}"):
