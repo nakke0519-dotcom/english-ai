@@ -318,6 +318,37 @@ selected_id = options_map[selected_option_label]
 selected_problem = st.session_state["PROBLEM_BANK"][selected_id]
 current_vocab_list = st.session_state["VOCAB_DICT"].get(selected_id, [])
 
+# --- 콜백 함수 정의 (위젯 인스턴스화 이전 세션 업데이트용) ---
+def clean_passage_callback(pass_key, sel_id):
+    current_txt = st.session_state.get(pass_key, "")
+    cleaned_p = clean_passage_text(current_txt)
+    st.session_state[pass_key] = cleaned_p
+    st.session_state["PROBLEM_BANK"][sel_id]["passage"] = cleaned_p
+
+def generate_vocab_tags_callback(pass_key, sel_id):
+    current_txt = st.session_state.get(pass_key, "")
+    clean_target_passage = re.sub(r'\[\[(.*?)\:(.*?)\]\]', r'\1', current_txt)
+    
+    tag_prompt = (
+        "당신은 대한민국 대학수학능력시험 및 EBS 수능특강 영어 출제 전문위원입니다.\n\n"
+        "[Strict Qualification Rules]\n"
+        "1. 지문에서 **고등학교 2~3학년 및 수능 난이도 수준에 해당하는 고난도 어휘 / 학술적 단어 / 구문 핵심 숙어 3~5개만** 엄선하세요.\n"
+        "2. **절대 태그하면 안 되는 어휘 (BANNED WORDS)**:\n"
+        "   - 중등~고1 수준 기본 어휘: know, known, rule, ruled, make, think, problem, people, show, useful, important, good, find 등\n"
+        "   - 지문의 문맥 해석을 방해하지 않는 상식적이고 기초적인 단어들\n"
+        "3. 선택된 고급 단어/표현만 원본 지문 위치 그대로 `[[영단어:문맥에 맞는 한글뜻]]` 형태로 교체하세요.\n"
+        "4. **다른 인사말, 설명, 마크다운 태그 없이 오직 교정된 지문 전체 텍스트만 출력하세요.**\n\n"
+        f"[영어 지문]\n{clean_target_passage}"
+    )
+    try:
+        model = genai.GenerativeModel('gemini-3.1-flash-lite')
+        res_tagged = model.generate_content(tag_prompt)
+        tagged_text = res_tagged.text.strip()
+        st.session_state[pass_key] = tagged_text
+        st.session_state["PROBLEM_BANK"][sel_id]["passage"] = tagged_text
+    except Exception as e:
+        st.error(f"AI 단어 태그 생성 오류: {e}")
+
 # --- 교사 전용 관리 제어판 ---
 if is_teacher:
     with st.sidebar:
@@ -396,7 +427,7 @@ if is_teacher:
                 with st.expander("🤖 전달된 AI 피드백 보기", expanded=False):
                     st.write(sub_info['feedback'])
 
-        # 2. 지문 및 문제 수정 (입력창 세션 연동)
+        # 2. 지문 및 문제 수정 (on_click 콜백 적용)
         with st.expander(f"⚙️ {selected_id}번 지문 및 문제 수정", expanded=False):
             new_title = st.text_input("문제 이름", value=selected_problem.get("title", ""), key=f"title_{selected_id}")
             q1_text = st.text_input("첫 번째 질문", value=selected_problem.get("q1", "1. 지문의 핵심 키워드"), key=f"q1_{selected_id}")
@@ -405,7 +436,6 @@ if is_teacher:
             
             st.caption("💡 **단어 툴팁 팁**: `[[영단어:한글뜻]]` 형태로 작성하거나 아래 AI 자동 생성 버튼을 누르세요!")
             
-            # 지문 입력창 세션키 동적 바인딩
             pass_key = f"pass_{selected_id}"
             if pass_key not in st.session_state:
                 st.session_state[pass_key] = selected_problem.get("passage", "")
@@ -414,40 +444,22 @@ if is_teacher:
             
             col_b1, col_b2 = st.columns(2)
             with col_b1:
-                if st.button("🧹 줄바꿈 자동 정돈", key=f"clean_btn_{selected_id}", use_container_width=True):
-                    cleaned_p = clean_passage_text(st.session_state[pass_key])
-                    st.session_state[pass_key] = cleaned_p
-                    st.session_state["PROBLEM_BANK"][selected_id]["passage"] = cleaned_p
-                    st.success("줄바꿈이 정돈되었습니다!")
-                    st.rerun()
+                st.button(
+                    "🧹 줄바꿈 자동 정돈",
+                    key=f"clean_btn_{selected_id}",
+                    on_click=clean_passage_callback,
+                    args=(pass_key, selected_id),
+                    use_container_width=True
+                )
 
             with col_b2:
-                if st.button("🤖 AI 고난도 단어 툴팁 태그 생성", key=f"auto_vocab_btn_{selected_id}", use_container_width=True):
-                    with st.spinner("수능/모의고사 고2-고3 수준의 고난도 어휘를 엄선하여 태그 생성 중..."):
-                        clean_target_passage = re.sub(r'\[\[(.*?)\:(.*?)\]\]', r'\1', st.session_state[pass_key])
-                        tag_prompt = (
-                            "당신은 대한민국 대학수학능력시험 및 EBS 수능특강 영어 출제 전문위원입니다.\n\n"
-                            "[Strict Qualification Rules]\n"
-                            "1. 지문에서 **고등학교 2~3학년 및 수능 난이도 수준에 해당하는 고난도 어휘 / 학술적 단어 / 구문 핵심 숙어 3~5개만** 엄선하세요.\n"
-                            "2. **절대 태그하면 안 되는 어휘 (BANNED WORDS)**:\n"
-                            "   - 중등~고1 수준 기본 어휘: know, known, rule, ruled, make, think, problem, people, show, useful, important, good, find 등\n"
-                            "   - 지문의 문맥 해석을 방해하지 않는 상식적이고 기초적인 단어들\n"
-                            "3. 선택된 고급 단어/표현만 원본 지문 위치 그대로 `[[영단어:문맥에 맞는 한글뜻]]` 형태로 교체하세요.\n"
-                            "4. **다른 인사말, 설명, 마크다운 태그 없이 오직 교정된 지문 전체 텍스트만 출력하세요.**\n\n"
-                            f"[영어 지문]\n{clean_target_passage}"
-                        )
-                        try:
-                            model = genai.GenerativeModel('gemini-3.1-flash-lite')
-                            res_tagged = model.generate_content(tag_prompt)
-                            tagged_text = res_tagged.text.strip()
-                            
-                            # 실제 Streamlit text_area 위젯의 입력값(Session State)을 직접 교체
-                            st.session_state[pass_key] = tagged_text
-                            st.session_state["PROBLEM_BANK"][selected_id]["passage"] = tagged_text
-                            st.success("입력 상자의 지문 텍스트에 `[[단어:뜻]]` 태그가 반영되었습니다! 필요시 수정한 뒤 저장하세요.")
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"AI 단어 태그 생성 오류: {e}")
+                st.button(
+                    "🤖 AI 고난도 단어 툴팁 태그 생성",
+                    key=f"auto_vocab_btn_{selected_id}",
+                    on_click=generate_vocab_tags_callback,
+                    args=(pass_key, selected_id),
+                    use_container_width=True
+                )
 
             new_key_points = st.text_area("추가 지시사항 / 채점 주의사항 (선택사항)", height=80, value=selected_problem.get("key_points", ""), key=f"key_{selected_id}")
 
