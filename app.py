@@ -14,7 +14,7 @@ except ImportError:
 
 st.set_page_config(page_title="ENGLISH READING AI ASSISTANT", page_icon="📖", layout="wide")
 
-# --- Custom CSS: 지문 상자 줄 간격 확대 및 마우스 호버 툴팁 스타일 (밑줄 제거 적용) ---
+# --- Custom CSS: 지문 상자 줄 간격 확대 및 마우스 호버 툴팁 스타일 ---
 st.markdown("""
     <style>
     .passage-box {
@@ -239,7 +239,7 @@ def save_problem_bank(data):
             return False, f"❌ GitHub 저장 오류: {e}"
     return True, "로컬 세션에 저장되었습니다."
 
-# --- 학생 제출 데이터 불러오기/저장 (60분 자동 삭제) ---
+# --- 학생 제출 데이터 불러오기/저장 (20분 자동 삭제 반영) ---
 def load_submissions():
     if os.path.exists(SUBMISSION_FILE):
         try:
@@ -249,7 +249,8 @@ def load_submissions():
             valid_submissions = []
             for sub in submissions:
                 sub_time = datetime.strptime(sub["timestamp"], "%Y-%m-%d %H:%M:%S")
-                if now - sub_time <= timedelta(minutes=60):
+                # 20분 이내 제출 데이터만 유효 처리
+                if now - sub_time <= timedelta(minutes=20):
                     valid_submissions.append(sub)
             if len(valid_submissions) != len(submissions):
                 with open(SUBMISSION_FILE, "w", encoding="utf-8") as f:
@@ -324,13 +325,13 @@ if is_teacher:
         st.markdown("---")
         
         # 1. 학생 답안 조회 및 최근 5분 요약 기능
-        with st.expander("📊 실시간 학생 답안 조회 & 5분 요약 분석", expanded=True):
+        with st.expander("📊 실시간 학생 답안 조회 (최근 20분)", expanded=True):
             if st.button("🔄 제출 내역 새로고침", use_container_width=True):
                 st.rerun()
                 
             submissions_data = load_submissions()
             
-            # 💡 최근 5분 동안의 제출 내역 필터링 및 AI 요약
+            # 최근 5분 동안의 제출 내역 필터링 및 AI 요약
             now = datetime.now()
             recent_5min_subs = []
             for sub in submissions_data:
@@ -376,7 +377,7 @@ if is_teacher:
 
             st.markdown("---")
             if not submissions_data:
-                st.info("최근 60분 이내에 제출된 학생 답안이 없습니다.")
+                st.info("최근 20분 이내에 제출된 학생 답안이 없습니다.")
             else:
                 sorted_subs = sorted(submissions_data, key=lambda x: x.get("timestamp", ""), reverse=True)
                 sub_labels = [f"{sub['student']} - {sub['problem_title']} ({sub['timestamp'].split()[1]})" for sub in sorted_subs]
