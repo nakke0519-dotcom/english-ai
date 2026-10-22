@@ -239,7 +239,7 @@ def save_problem_bank(data):
             return False, f"❌ GitHub 저장 오류: {e}"
     return True, "로컬 세션에 저장되었습니다."
 
-# --- 학생 제출 데이터 불러오기/저장 (20분 자동 삭제 반영) ---
+# --- 학생 제출 데이터 불러오기/저장 (20분 자동 삭제) ---
 def load_submissions():
     if os.path.exists(SUBMISSION_FILE):
         try:
@@ -249,7 +249,6 @@ def load_submissions():
             valid_submissions = []
             for sub in submissions:
                 sub_time = datetime.strptime(sub["timestamp"], "%Y-%m-%d %H:%M:%S")
-                # 20분 이내 제출 데이터만 유효 처리
                 if now - sub_time <= timedelta(minutes=20):
                     valid_submissions.append(sub)
             if len(valid_submissions) != len(submissions):
@@ -331,7 +330,6 @@ if is_teacher:
                 
             submissions_data = load_submissions()
             
-            # 최근 5분 동안의 제출 내역 필터링 및 AI 요약
             now = datetime.now()
             recent_5min_subs = []
             for sub in submissions_data:
@@ -398,22 +396,45 @@ if is_teacher:
                 with st.expander("🤖 전달된 AI 피드백 보기", expanded=False):
                     st.write(sub_info['feedback'])
 
-        # 2. 지문 및 문제 수정
+        # 2. 지문 및 문제 수정 (AI 단어 툴팁 자동 생성 버튼 추가)
         with st.expander(f"⚙️ {selected_id}번 지문 및 문제 수정", expanded=False):
             new_title = st.text_input("문제 이름", value=selected_problem.get("title", ""), key=f"title_{selected_id}")
             q1_text = st.text_input("첫 번째 질문", value=selected_problem.get("q1", "1. 지문의 핵심 키워드"), key=f"q1_{selected_id}")
             q2_text = st.text_input("두 번째 질문", value=selected_problem.get("q2", "2. 주제 한 문장 요약"), key=f"q2_{selected_id}")
             q3_text = st.text_input("세 번째 질문", value=selected_problem.get("q3", "3. 글의 흐름 세 문장 요약"), key=f"q3_{selected_id}")
             
-            st.caption("💡 **단어 툴팁 팁**: 지문 수정 시 `[[영단어:한글뜻]]` 형태로 적으면 지문에서 마우스를 올릴 때 뜻이 떠오릅니다! (예: `[[crucial:중요한]]`)")
+            st.caption("💡 **단어 툴팁 팁**: `[[영단어:한글뜻]]` 형태로 작성하거나 아래 AI 자동 생성 버튼을 누르세요!")
             raw_passage_val = selected_problem.get("passage", "")
             new_passage = st.text_area("영어 지문", height=150, value=raw_passage_val, key=f"pass_{selected_id}")
             
-            if st.button("🧹 지문 줄바꿈 자동 정돈", key=f"clean_btn_{selected_id}"):
-                cleaned_p = clean_passage_text(new_passage)
-                st.session_state["PROBLEM_BANK"][selected_id]["passage"] = cleaned_p
-                st.success("어색한 줄바꿈이 깔끔하게 정돈되었습니다!")
-                st.rerun()
+            col_b1, col_b2 = st.columns(2)
+            with col_b1:
+                if st.button("🧹 줄바꿈 자동 정돈", key=f"clean_btn_{selected_id}", use_container_width=True):
+                    cleaned_p = clean_passage_text(new_passage)
+                    st.session_state["PROBLEM_BANK"][selected_id]["passage"] = cleaned_p
+                    st.success("줄바꿈이 정돈되었습니다!")
+                    st.rerun()
+
+            with col_b2:
+                if st.button("🤖 AI 단어 툴팁 자동 생성", key=f"auto_vocab_btn_{selected_id}", use_container_width=True):
+                    with st.spinner("AI가 지문의 핵심/난이도 단어를 태그로 변환 중..."):
+                        clean_target_passage = re.sub(r'\[\[(.*?)\:(.*?)\]\]', r'\1', new_passage)
+                        tag_prompt = (
+                            "당신은 고등학교 영어 교사입니다.\n"
+                            "아래 제시된 영어 지문에서 고등 수능/모의고사 수준에서 다소 어렵거나 중요한 핵심 단어 3~5개를 선별해 주세요.\n"
+                            "선별한 단어들을 지문 속 원래 위치 그대로 `[[단어:다듬어진 한글뜻]]` 문법으로 교체하여 지문 전체를 다시 출력해 주세요.\n"
+                            "다른 부연 설명이나 인사말은 절대 추가하지 말고 오직 태그가 적용된 지문 전체 텍스트만 출력하세요.\n\n"
+                            f"[영어 지문]\n{clean_target_passage}"
+                        )
+                        try:
+                            model = genai.GenerativeModel('gemini-3.1-flash-lite')
+                            res_tagged = model.generate_content(tag_prompt)
+                            tagged_text = res_tagged.text.strip()
+                            st.session_state["PROBLEM_BANK"][selected_id]["passage"] = tagged_text
+                            st.success("핵심 단어가 `[[단어:뜻]]` 태그로 자동 변환되었습니다!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"AI 단어 태그 생성 오류: {e}")
 
             new_key_points = st.text_area("추가 지시사항 / 채점 주의사항 (선택사항)", height=80, value=selected_problem.get("key_points", ""), key=f"key_{selected_id}")
 
