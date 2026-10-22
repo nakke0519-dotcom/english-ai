@@ -2,6 +2,7 @@ import streamlit as st
 import google.generativeai as genai
 import json
 import os
+import re
 from datetime import datetime, timedelta
 
 # GitHub API 라이브러리 불러오기
@@ -13,7 +14,7 @@ except ImportError:
 
 st.set_page_config(page_title="ENGLISH READING AI ASSISTANT", page_icon="📖", layout="wide")
 
-# --- Custom CSS: 지문 상자 줄 간격 및 글자 크기 대폭 확대 (판서용) ---
+# --- Custom CSS: 지문 상자 줄 간격 확대 및 마우스 호버 툴팁 스타일 ---
 st.markdown("""
     <style>
     .passage-box {
@@ -27,8 +28,83 @@ st.markdown("""
         margin-bottom: 20px;
         word-break: break-word;
     }
+    
+    /* 호버 툴팁 스타일 */
+    .vocab-tooltip {
+        position: relative;
+        display: inline-block;
+        font-weight: bold;
+        color: #1e40af;
+        border-bottom: 2px dashed #3b82f6;
+        cursor: pointer;
+        padding: 0 2px;
+    }
+
+    .vocab-tooltip .tooltip-text {
+        visibility: hidden;
+        width: max-content;
+        max-width: 200px;
+        background-color: #1e293b;
+        color: #ffffff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 6px 10px;
+        position: absolute;
+        z-index: 10;
+        bottom: 125%;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+        font-size: 14px;
+        font-weight: normal;
+        line-height: 1.4;
+        box-shadow: 0px 4px 10px rgba(0,0,0,0.15);
+    }
+
+    .vocab-tooltip .tooltip-text::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        margin-left: -5px;
+        border-width: 5px;
+        border-style: solid;
+        border-color: #1e293b transparent transparent transparent;
+    }
+
+    .vocab-tooltip:hover .tooltip-text {
+        visibility: visible;
+        opacity: 1;
+    }
     </style>
 """, unsafe_allow_html=True)
+
+# --- 영어 지문 줄바꿈 자동 정돈 및 툴팁 태그 파싱 함수 ---
+def clean_passage_text(text):
+    if not text:
+        return ""
+    text = re.sub(r'\n\s*\n', ' [[PARAGRAPH]] ', text)
+    text = re.sub(r'\s*\n\s*', ' ', text)
+    text = text.replace(' [[PARAGRAPH]] ', '\n\n')
+    text = re.sub(r' +', ' ', text)
+    return text.strip()
+
+def render_passage_with_tooltips(passage_text):
+    if not passage_text:
+        return ""
+    
+    # 줄바꿈을 HTML로 치환
+    formatted = passage_text.replace('\n', '<br>')
+    
+    # [[단어:뜻]] 정규식 패턴 찾아서 툴팁 HTML로 변환
+    pattern = r'\[\[(.*?)\:(.*?)\]\]'
+    def replace_with_tooltip(match):
+        word = match.group(1).strip()
+        meaning = match.group(2).strip()
+        return f'<span class="vocab-tooltip">{word}<span class="tooltip-text">{meaning}</span></span>'
+    
+    return re.sub(pattern, replace_with_tooltip, formatted)
 
 # --- API 키 및 비밀번호 확인 ---
 api_key = st.secrets.get("GEMINI_API_KEY")
@@ -55,7 +131,7 @@ def get_default_bank():
             "q1": "1. 지문의 핵심 키워드",
             "q2": "2. 주제 한 문장 요약",
             "q3": "3. 글의 흐름 세 문장 요약",
-            "passage": f"여기에 {i}번 영어 지문을 입력하세요.",
+            "passage": f"여기에 {i}번 영어 지문을 입력하세요. [[crucial:중요한]] 표시는 단어 툴팁 예시입니다.",
             "key_points": ""
         }
     return default_bank
@@ -276,13 +352,23 @@ if is_teacher:
                 with st.expander("🤖 전달된 AI 피드백 보기", expanded=False):
                     st.write(sub_info['feedback'])
 
-        # 2. 지문 및 문제 수정
+        # 2. 지문 및 문제 수정 (단어 툴팁 사용 안내 포함)
         with st.expander(f"⚙️ {selected_id}번 지문 및 문제 수정", expanded=False):
             new_title = st.text_input("문제 이름", value=selected_problem.get("title", ""), key=f"title_{selected_id}")
             q1_text = st.text_input("첫 번째 질문", value=selected_problem.get("q1", "1. 지문의 핵심 키워드"), key=f"q1_{selected_id}")
             q2_text = st.text_input("두 번째 질문", value=selected_problem.get("q2", "2. 주제 한 문장 요약"), key=f"q2_{selected_id}")
             q3_text = st.text_input("세 번째 질문", value=selected_problem.get("q3", "3. 글의 흐름 세 문장 요약"), key=f"q3_{selected_id}")
-            new_passage = st.text_area("영어 지문", height=150, value=selected_problem.get("passage", ""), key=f"pass_{selected_id}")
+            
+            st.caption("💡 **단어 툴팁 팁**: 지문 수정 시 `[[영단어:한글뜻]]` 형태로 적으면 지문에서 마우스를 올릴 때 뜻이 떠오릅니다! (예: `[[crucial:중요한]]`)")
+            raw_passage_val = selected_problem.get("passage", "")
+            new_passage = st.text_area("영어 지문", height=150, value=raw_passage_val, key=f"pass_{selected_id}")
+            
+            if st.button("🧹 지문 줄바꿈 자동 정돈", key=f"clean_btn_{selected_id}"):
+                cleaned_p = clean_passage_text(new_passage)
+                st.session_state["PROBLEM_BANK"][selected_id]["passage"] = cleaned_p
+                st.success("어색한 줄바꿈이 깔끔하게 정돈되었습니다!")
+                st.rerun()
+
             new_key_points = st.text_area("추가 지시사항 / 채점 주의사항 (선택사항)", height=80, value=selected_problem.get("key_points", ""), key=f"key_{selected_id}")
 
             if st.button("💾 지문 변경사항 저장", type="primary"):
@@ -346,23 +432,25 @@ with st.expander(f"📝 [수업 전 3분] {selected_id}번 지문 핵심 영단�
                 else:
                     st.write(f"- **{item['word']}**: ⚠️ 미작성 ➔ 정답/모범뜻: **{correct_m}**")
 
-# --- 학생용: 2. 영어 지문 및 문제 영역 (넓은 판서용 지문 상자) ---
+# --- 학생용: 2. 영어 지문 및 문제 영역 (툴팁 렌더링 적용) ---
 st.markdown("---")
 st.subheader(f"📝 {selected_problem['title']}")
 
-# 넓은 줄 간격을 적용한 custom HTML 지문 상자
-passage_text = selected_problem['passage'].replace('\n', '<br>')
-st.markdown(f'<div class="passage-box">{passage_text}</div>', unsafe_allow_html=True)
+# 툴팁 HTML이 포함된 지문 상자 출력
+html_passage = render_passage_with_tooltips(selected_problem['passage'])
+st.markdown(f'<div class="passage-box">{html_passage}</div>', unsafe_allow_html=True)
 
-# 💡 AI 도우미 콜업 버튼
+# 💡 간결한 AI 도우미 콜업 버튼
 col_hint_btn, _ = st.columns([1, 2])
 with col_hint_btn:
     if st.button("💡 너무 어려워요! AI 도우미 콜업", key=f"hint_btn_{selected_id}"):
         with st.spinner("AI 도우미 분석 중..."):
+            # 툴팁 표기법 제거 후 AI에게 순수 지문 전달
+            clean_prompt_passage = re.sub(r'\[\[(.*?)\:(.*?)\]\]', r'\1', selected_problem['passage'])
             hint_prompt = (
                 "당신은 고등학교 영어 교사입니다.\n"
                 "아래 제시된 지문을 읽고, 불필요한 인사말이나 긴 설명 없이 오직 아래 지정된 서식대로만 힌트를 작성해 주세요.\n\n"
-                f"[영어 지문]\n{selected_problem['passage']}\n\n"
+                f"[영어 지문]\n{clean_prompt_passage}\n\n"
                 "[출력 서식 규칙 (반드시 이 규칙대로만 작성하세요)]\n"
                 "첫 줄: AI 도우미 등장!\n\n"
                 "📌 **어려운 단어 / 숙어 표현**:\n"
@@ -402,7 +490,7 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
             if not key_points_prompt:
                 key_points_prompt = "별도의 모범 답안이 지정되지 않았습니다. 지문의 내용과 구문 맥락을 AI가 직접 정확히 해석 및 평가하여 정답 여부를 판정하세요."
 
-            passage_content = selected_problem['passage']
+            clean_ai_passage = re.sub(r'\[\[(.*?)\:(.*?)\]\]', r'\1', selected_problem['passage'])
             q1_val = selected_problem.get('q1')
             q2_val = selected_problem.get('q2')
             q3_val = selected_problem.get('q3')
@@ -411,7 +499,7 @@ if st.button("🚀 AI 피드백 받기", type="primary"):
                 "당신은 EBS '수능특강 Light 영어독해연습' 및 대학수학능력시험 영어영역에 매우 정통한 베테랑 고등학교 영어 교사입니다.\n"
                 "제시된 지문은 '수능특강 Light 영어독해연습' 수준의 구문이며, 문제 유형은 수능 및 모의고사 출제 유형에 해당합니다.\n\n"
                 "제시된 [영어 지문]을 스스로 정확히 분석하여, 학생이 작성한 답안을 기준에 맞추어 전문적이고 친절하게 피드백 해주세요.\n\n"
-                f"[영어 지문]\n{passage_content}\n\n"
+                f"[영어 지문]\n{clean_ai_passage}\n\n"
                 f"[교사의 추가 지시사항 및 특이 채점 기준]\n{key_points_prompt}\n\n"
                 f"[학생이 작성한 질문 및 답안]\n"
                 f"- 질문 1: {q1_val}\n  학생 답안: {user_ans1}\n"
