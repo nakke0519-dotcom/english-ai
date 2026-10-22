@@ -14,7 +14,7 @@ except ImportError:
 
 st.set_page_config(page_title="ENGLISH READING AI ASSISTANT", page_icon="📖", layout="wide")
 
-# --- Custom CSS: 지문 상자 줄 간격 확대 및 마우스 호버 툴팁 스타일 ---
+# --- Custom CSS: 지문 상자 줄 간격 확대 및 마우스 호버 툴팁 스타일 (밑줄 제거 적용) ---
 st.markdown("""
     <style>
     .passage-box {
@@ -29,13 +29,12 @@ st.markdown("""
         word-break: break-word;
     }
     
-    /* 호버 툴팁 스타일 */
+    /* 호버 툴팁 스타일 (밑줄 제거, 볼드체 강조) */
     .vocab-tooltip {
         position: relative;
         display: inline-block;
         font-weight: bold;
-        color: #1e40af;
-        border-bottom: 2px dashed #3b82f6;
+        color: #1d4ed8;
         cursor: pointer;
         padding: 0 2px;
     }
@@ -43,7 +42,7 @@ st.markdown("""
     .vocab-tooltip .tooltip-text {
         visibility: hidden;
         width: max-content;
-        max-width: 200px;
+        max-width: 220px;
         background-color: #1e293b;
         color: #ffffff;
         text-align: center;
@@ -94,10 +93,7 @@ def render_passage_with_tooltips(passage_text):
     if not passage_text:
         return ""
     
-    # 줄바꿈을 HTML로 치환
     formatted = passage_text.replace('\n', '<br>')
-    
-    # [[단어:뜻]] 정규식 패턴 찾아서 툴팁 HTML로 변환
     pattern = r'\[\[(.*?)\:(.*?)\]\]'
     def replace_with_tooltip(match):
         word = match.group(1).strip()
@@ -283,6 +279,9 @@ if "latest_feedback" not in st.session_state:
 if "ai_hints" not in st.session_state:
     st.session_state["ai_hints"] = {}
 
+if "recent_summary" not in st.session_state:
+    st.session_state["recent_summary"] = None
+
 # --- 사이드바: 교사 제어판 ---
 with st.sidebar:
     st.header("🔒 [교사용] 관리자 제어판")
@@ -324,19 +323,65 @@ if is_teacher:
     with st.sidebar:
         st.markdown("---")
         
-        # 1. 학생 답안 조회 (수동 새로고침)
-        with st.expander("📊 실시간 학생 답안 조회 (최근 60분)", expanded=True):
-            if st.button("🔄 실시간 제출 내역 새로고침", use_container_width=True):
+        # 1. 학생 답안 조회 및 최근 5분 요약 기능
+        with st.expander("📊 실시간 학생 답안 조회 & 5분 요약 분석", expanded=True):
+            if st.button("🔄 제출 내역 새로고침", use_container_width=True):
                 st.rerun()
                 
             submissions_data = load_submissions()
+            
+            # 💡 최근 5분 동안의 제출 내역 필터링 및 AI 요약
+            now = datetime.now()
+            recent_5min_subs = []
+            for sub in submissions_data:
+                sub_time = datetime.strptime(sub["timestamp"], "%Y-%m-%d %H:%M:%S")
+                if now - sub_time <= timedelta(minutes=5):
+                    recent_5min_subs.append(sub)
+
+            st.markdown("---")
+            if st.button("⚡ 최근 5분 학생 오답 패턴 요약 분석", type="primary", use_container_width=True):
+                if not recent_5min_subs:
+                    st.session_state["recent_summary"] = "⚠️ 최근 5분 이내에 제출된 학생 답안이 없습니다."
+                else:
+                    with st.spinner("최근 5분간 제출된 답안 분석 중..."):
+                        sub_text_block = ""
+                        for idx, s in enumerate(recent_5min_subs, 1):
+                            sub_text_block += (
+                                f"[학생 {idx}: {s['student']}]\n"
+                                f"- 키워드 답안: {s['ans1']}\n"
+                                f"- 주제 답안: {s['ans2']}\n"
+                                f"- 흐름 답안: {s['ans3']}\n"
+                                f"- AI 피드백 내용 요약: {s['feedback'][:150]}...\n\n"
+                            )
+
+                        summary_prompt = (
+                            "당신은 베테랑 영어 교사의 수업 보조 AI 분석가입니다.\n"
+                            "최근 5분 동안 학생들이 제출한 답안과 AI 피드백 요약본을 바탕으로, "
+                            "선생님이 지금 교실에서 바로 설명해 주셔야 할 가이드라인을 아주 간결하게 작성해 주세요.\n\n"
+                            f"[지문 제목]: {selected_problem['title']}\n"
+                            f"[최근 5분간 작성된 학생 답안 모음]\n{sub_text_block}\n"
+                            "[출력 형식 규칙]\n"
+                            "1. ❓ **학생들이 주로 헷갈려하는 부분** (2문장 이내)\n"
+                            "2. 💡 **교사가 지금 중점적으로 설명해야 할 포인트** (2문장 이내)"
+                        )
+                        try:
+                            model = genai.GenerativeModel('gemini-3.1-flash-lite')
+                            res = model.generate_content(summary_prompt)
+                            st.session_state["recent_summary"] = res.text
+                        except Exception as e:
+                            st.session_state["recent_summary"] = f"분석 중 오류 발생: {e}"
+
+            if st.session_state.get("recent_summary"):
+                st.info(f"### 🎯 최근 5분 실시간 오답 분석\n{st.session_state['recent_summary']}")
+
+            st.markdown("---")
             if not submissions_data:
                 st.info("최근 60분 이내에 제출된 학생 답안이 없습니다.")
             else:
                 sorted_subs = sorted(submissions_data, key=lambda x: x.get("timestamp", ""), reverse=True)
                 sub_labels = [f"{sub['student']} - {sub['problem_title']} ({sub['timestamp'].split()[1]})" for sub in sorted_subs]
                 
-                selected_sub_label = st.selectbox("📋 제출 내역 선택", sub_labels)
+                selected_sub_label = st.selectbox("📋 개별 제출 내역 상세 선택", sub_labels)
                 selected_sub_idx = sub_labels.index(selected_sub_label)
                 sub_info = sorted_subs[selected_sub_idx]
                 
@@ -352,7 +397,7 @@ if is_teacher:
                 with st.expander("🤖 전달된 AI 피드백 보기", expanded=False):
                     st.write(sub_info['feedback'])
 
-        # 2. 지문 및 문제 수정 (단어 툴팁 사용 안내 포함)
+        # 2. 지문 및 문제 수정
         with st.expander(f"⚙️ {selected_id}번 지문 및 문제 수정", expanded=False):
             new_title = st.text_input("문제 이름", value=selected_problem.get("title", ""), key=f"title_{selected_id}")
             q1_text = st.text_input("첫 번째 질문", value=selected_problem.get("q1", "1. 지문의 핵심 키워드"), key=f"q1_{selected_id}")
@@ -432,7 +477,7 @@ with st.expander(f"📝 [수업 전 3분] {selected_id}번 지문 핵심 영단�
                 else:
                     st.write(f"- **{item['word']}**: ⚠️ 미작성 ➔ 정답/모범뜻: **{correct_m}**")
 
-# --- 학생용: 2. 영어 지문 및 문제 영역 (툴팁 렌더링 적용) ---
+# --- 학생용: 2. 영어 지문 및 문제 영역 ---
 st.markdown("---")
 st.subheader(f"📝 {selected_problem['title']}")
 
@@ -445,7 +490,6 @@ col_hint_btn, _ = st.columns([1, 2])
 with col_hint_btn:
     if st.button("💡 너무 어려워요! AI 도우미 콜업", key=f"hint_btn_{selected_id}"):
         with st.spinner("AI 도우미 분석 중..."):
-            # 툴팁 표기법 제거 후 AI에게 순수 지문 전달
             clean_prompt_passage = re.sub(r'\[\[(.*?)\:(.*?)\]\]', r'\1', selected_problem['passage'])
             hint_prompt = (
                 "당신은 고등학교 영어 교사입니다.\n"
