@@ -331,13 +331,12 @@ def generate_vocab_tags_callback(pass_key, sel_id):
     
     tag_prompt = (
         "당신은 대한민국 대학수학능력시험 및 EBS 수능특강 영어 출제 전문위원입니다.\n\n"
-        "[Strict Qualification Rules]\n"
-        "1. 지문에서 **고등학교 2~3학년 및 수능 난이도 수준에 해당하는 고난도 어휘 / 학술적 단어 / 구문 핵심 숙어 3~5개만** 엄선하세요.\n"
-        "2. **절대 태그하면 안 되는 어휘 (BANNED WORDS)**:\n"
-        "   - 중등~고1 수준 기본 어휘: know, known, rule, ruled, make, think, problem, people, show, useful, important, good, find 등\n"
-        "   - 지문의 문맥 해석을 방해하지 않는 상식적이고 기초적인 단어들\n"
-        "3. 선택된 고급 단어/표현만 원본 지문 위치 그대로 `[[영단어:문맥에 맞는 한글뜻]]` 형태로 교체하세요.\n"
-        "4. **다른 인사말, 설명, 마크다운 태그 없이 오직 교정된 지문 전체 텍스트만 출력하세요.**\n\n"
+        "[CRITICAL RULE: DO NOT ALTER ORIGINAL WORDS]\n"
+        "1. **절대로 원문의 단어를 다른 유의어나 고급 어휘로 바꾸거나(paraphrase) 문장을 재작성하지 마세요.** (예: bad -> detrimental 변경 절대 금지)\n"
+        "2. 원본 지문에 존재하는 단어 단 1글자도 변경하지 말고, **지문 원문에 이미 존재하는 어휘 중** 고2~고3 수능 난이도 수준의 어휘/숙어 3~5개만 선택하세요.\n"
+        "3. 선택한 단어의 원본 텍스트 그대로 `[[원본영단어:문맥에 맞는 한글뜻]]` 형태의 태그만 입히세요.\n"
+        "4. 중등~고1 수준 기본 단어(know, make, think, show, bad 등)는 태그 대상에서 제외하세요.\n"
+        "5. 다른 인사말이나 마크다운 없이 오직 태그만 부착된 원본 지문 전체를 출력하세요.\n\n"
         f"[영어 지문]\n{clean_target_passage}"
     )
     try:
@@ -532,7 +531,7 @@ st.subheader(f"📝 {selected_problem['title']}")
 html_passage = render_passage_with_tooltips(selected_problem['passage'])
 st.markdown(f'<div class="passage-box">{html_passage}</div>', unsafe_allow_html=True)
 
-# 💡 수정된 AI 도우미 콜업 버튼 및 프롬프트
+# 💡 간결한 AI 도우미 콜업 버튼
 col_hint_btn, _ = st.columns([1, 2])
 with col_hint_btn:
     if st.button("💡 너무 어려워요! AI 도우미 콜업", key=f"hint_btn_{selected_id}"):
