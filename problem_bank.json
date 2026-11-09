@@ -105,9 +105,9 @@
   },
   "14": {
     "title": "Mini Test 2 5번 (112P)",
-    "q1": "1. 지문의 핵심 키워드",
-    "q2": "2. 주제 한 문장 요약",
-    "q3": "3. 글의 흐름 세 문장 요약",
+    "q1": "이 글의 핵심 키워드는?",
+    "q2": "이 글의 주제를 한 문장으로 영작해보세요.",
+    "q3": "글에서 말하는 '적절하지 않은 목표 설정'은 무엇인지 설명해보세요.",
     "passage": "Setting effective goals motivates people to work hard and increases their chances of success. But what is an effective goal? The organizational psychologists Edwin Locke and Gary Latham developed an [[influential:영향력 있는]] theory. According to Locke and Latham, challenging and specific goals are the best if they are not [[overly:과도하게]] difficult. Challenging goals encourage effort, [[persistence:끈기, 지속성]], and concentration. In contrast, goals that are too easy or too hard can [[undermine:약화시키다, 손상시키다]] motivation and therefore lead to failure. Dividing specific goals into [[concrete:구체적인]] steps also leads to success. If you are interested in running the Boston Marathon, for instance, your first goal might be gaining the [[stamina:체력]] to run 1 mile. When you can run a mile, you can set another goal and thus build up to running the 26-mile marathon. Focusing on concrete, short-term goals [[facilitates:촉진하다, 용이하게 하다]] achieving long-term goals.",
     "key_points": ""
   },
