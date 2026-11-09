@@ -89,11 +89,11 @@
   },
   "12": {
     "title": "Mini Test 2 3번 (110P)",
-    "q1": "1. 지문의 핵심 키워드",
-    "q2": "2. 주제 한 문장 요약",
-    "q3": "3. 글의 흐름 세 문장 요약",
+    "q1": "이 지문의 핵심 키워드는?",
+    "q2": "이 글의 주제를 한 문장으로 요약하면?",
+    "q3": "화자가 주장하는 바를 드러내 주는, 지문 속에서 반드시 읽어야 하는 핵심 문장은?",
     "passage": "Market research, in its simplest form, [[refers to:의미하다, 지칭하다, 나타내다]] the process of collecting, storing, organising, and [[assessing:평가하는]] information about clients, [[competitors:경쟁자들]], and any other ways they are influenced in the buying of products. Whether you are starting a new business or launching a new product or service, your research should be [[compiled:편집된/종합된]] before you [[embark:착수하다]] fully on the project. In the long term, time spent on how to investigate your potential market will be time well spent, especially if you discover a major [[flaw:결함]] in your idea, or even worse, find out that there is not even a market. At least then you would only lose the time and energy you spent compiling your data and not thousands of pounds in stock you could not sell or a product that would be too expensive to manufacture.",
-    "key_points": ""
+    "key_points": "your research should be compiled before you embark fully on the project.\n이 부분이 '지문 속에서 반드시 읽어야 하는 핵심 문장'에 해당돼."
   },
   "13": {
     "title": "지문 13: (제목을 입력하세요)",
