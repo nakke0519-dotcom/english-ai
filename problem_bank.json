@@ -113,9 +113,9 @@
   },
   "15": {
     "title": "Mini Test 2 6번 (113P)",
-    "q1": "1. 지문의 핵심 키워드",
-    "q2": "2. 주제 한 문장 요약",
-    "q3": "3. 글의 흐름 세 문장 요약",
+    "q1": "이 글의 핵심 키워드는?",
+    "q2": "이 글의 주제를 한 문장으로 영작해보세요.",
+    "q3": "이 글에서 말하는 경제학과 사회학의 차이는?",
     "passage": "Economists have developed techniques for measuring such things as prices, [[supply and demand:공급과 수요]], money supplies, rates of inflation, and employment. This study of the creation, [[distribution:분배]], and consumption of goods and services is known as economics. The economy, however, is just one part of society, and each individual in society decides whether to buy an American car or a Japanese [[import:수입품, 수입하다]], whether she or he is able to handle the mortgage payment on a dream house, and so on. Whereas economists study price and availability factors, sociologists are interested in the social factors that influence a person’s economic decisions. Does peer pressure result in buying the large [[flashy:호화로운]] car, or does concern about gas mileage lead to the purchase of a fuel-efficient or hybrid vehicle? What social and cultural factors [[contribute:기여하다, 공헌하다]] to the differences in the [[portion:비율, 몫]] of income saved by the average wage earner in different societies? What effect does the unequal [[allocation:할당, 배분]] of resources have on social interaction? These are examples of the questions sociologists seek to answer.",
     "key_points": ""
   },
