@@ -104,7 +104,7 @@ def render_passage_with_tooltips(passage_text):
 
 # --- API 키 및 비밀번호 확인 ---
 api_key = st.secrets.get("GEMINI_API_KEY")
-teacher_password = st.secrets.get("TEACHER_PASSWORD", "rnswltk1!")
+teacher_password = st.secrets.get("TEACHER_PASSWORD")  # 기본값 비밀번호 제거!
 github_token = st.secrets.get("GITHUB_TOKEN")
 github_repo_name = st.secrets.get("GITHUB_REPO")
 
