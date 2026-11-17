@@ -213,7 +213,7 @@
     "q2": "이 글의 핵심 키워드는?",
     "q3": "이 글의 주제를 한 문장으로 요약하면?",
     "passage": "When we focus on the [[sensations:감각, 느낌]] produced by food and drink, or on hearing a symphony, we misunderstand what is going on if we think of this in terms of bodily functions only. Our taste, our hearing, our vision — these are all aspects of the mind.\n\n(A) Of course, in addition to [[inter-species:종끼리의]] differences in such processing, there are smaller [[intra-species:종 내의]] differences. The [[variation:변이]] in types of processing, [[cognition:인지]], and understanding between people is increasingly well-known today.\n\n(B) And not only do we know that the information from the senses does not come purely from the world as if given, it is processed by our brains in certain ways. Thus, we experience the world differently than does a bird or a cat. Our bodies are different, the senses are different, and the way those senses are processed in our brains is different.\n\n(C) These are all produced by the mind, and we can prove this in [[myriad:무수한]] ways. Brain damage or [[ingestion:섭취, 복용]] of mind-altering drugs will change the sensations of these things, as will [[illness:질병]] or other interventions affecting the brain. Our experience is created wholly by the mind, from the information of the senses, yes, but still by the mind.",
-    "key_points": ""
+    "key_points": "C-B-A. C의 'These'는 주어진 문장의 'our taste, our hearing, our vision'을 뜻하고, B의 'the information from the senses'는 정관사이므로 C에서 언급한 것을 재언급한 것으로 볼 수 있다. A의 'such processing'은 B의 'the way those sesnes are processed'를 받는다.\n\n이 글의 주제는 '우리가 느끼는 감각은 뇌가 느끼는 정신의 측면으로, 이는 종끼리, 심지어 같은 종에서도 차이가 드러난다.' 라고 할 수 있다."
   },
   "28": {
     "title": "지문 28: (제목을 입력하세요)",
