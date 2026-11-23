@@ -225,11 +225,11 @@
   },
   "29": {
     "title": "Mini Test 2 22번 (129P)",
-    "q1": "1. 지문의 핵심 키워드",
-    "q2": "2. 주제 한 문장 요약",
-    "q3": "3. 글의 흐름 세 문장 요약",
-    "passage": "These involve responsible efforts to seek to restore one’s relationship with the sacred, seek to make amends, and seek to repair psychological or moral injury to oneself.\n\nPersonal virtues like self-compassion and self-forgiveness can repair damage to one’s own psyche that might produce self-condemnation and lead to defensively taking anger out on others. ( ① ) Often a dominant experience is one’s experience of self-condemnation, with accompanying guilt, shame, and regret. ( ② ) Many methods are available to deal with such experiences and remove or reduce self-condemnation. ( ③ ) They also involve self-forgiveness and the related but different experience of self-acceptance. ( ④ ) In addition, people make commitments to live into the future without repeating moral mistakes. ( ⑤ ) But there are other ways to reduce one’s sense of injustice such as seeking to restore justice by making amends, self-punishment, compensation, — letting oneself off of the moral hook, or seeking absolution from the one harmed or from an authority such as a priest.",
-    "key_points": ""
+    "q1": "이 글의 핵심 키워드는?",
+    "q2": "이 글의 주제를 한 문장으로 영작해보세요.",
+    "q3": "주어진 문장이 들어갈 위치와, 그 문법적 근거는?",
+    "passage": "These involve responsible efforts to seek to restore one’s relationship with the [[sacred: 신성한]], seek to make [[amends:보상, 속죄]], and seek to repair psychological or moral injury to oneself.\n\nPersonal virtues like [[self-compassion:자기연민]] and self-forgiveness can repair damage to one’s own [[psyche:마음, 정신]] that might produce [[self-condemnation:자기 비난]] and lead to defensively taking anger out on others. ( ① ) Often a [[dominant:지배적인, 주된]] experience is one’s experience of self-condemnation, with [[accompanying:수반되는]] guilt, shame, and regret. ( ② ) Many methods are available to deal with such experiences and remove or reduce self-condemnation. ( ③ ) They also involve self-forgiveness and the related but different experience of self-acceptance. ( ④ ) In addition, people make [[commitments:헌신/약속]] to live into the future without repeating moral mistakes. ( ⑤ ) But there are other ways to reduce one’s sense of injustice such as seeking to restore justice by making amends, self-punishment, compensation, — letting oneself off of the moral hook, or seeking [[absolution:면죄]] from the one harmed or from an authority such as a priest.",
+    "key_points": "정답은 3번이야. 그 이유는 앞에 나온 'Many methods' 를 가리키는 것이 주어진 문장의 'These' 이기 때문이야."
   },
   "30": {
     "title": "지문 30: (제목을 입력하세요)",
